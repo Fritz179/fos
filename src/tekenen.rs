@@ -1,4 +1,7 @@
 mod sdl_renderer;
+mod font;
+
+use font::{FONT, FIRST_CHAR};
 
 pub use sdl2::{event::Event, keyboard::Keycode};
 use sdl_renderer::SDLRenderer;
@@ -81,7 +84,21 @@ impl Tekenen {
     pub fn update(&self) {
         let app = self.get_app();
 
+        let now = std::time::SystemTime::now();
+
         app.borrow_mut().update();
+
+        match now.elapsed() {
+            Ok(elapsed) => {
+                let mut text = "Update time: ".to_owned();
+                text.push_str(&elapsed.as_micros().to_string());
+
+                self.draw_text(&text, 600, 600 - 16)
+            }
+            Err(e) => {
+                println!("Error: {e:?}");
+            }
+        }
     }
 
     pub fn event_handler(&self, event: Event) -> bool {
@@ -105,32 +122,72 @@ impl Tekenen {
         return Some((y * self.width as i32 + x) as usize)
     }
 
-    pub fn set_pixel(&self, x: i32, y: i32, color: Pixel) {
+    pub fn set_pixel(&self, pixels: &mut Pixels, x: i32, y: i32, color: Pixel) {
+        
+
         if let Some(index) = self.pixel_index(x, y) {
 
             // self.pixels.borrow_mut()[index] = color;
-            self.pixels.borrow_mut()[index * 4 + 0] = color[0];
-            self.pixels.borrow_mut()[index * 4 + 1] = color[1];
-            self.pixels.borrow_mut()[index * 4 + 2] = color[2];
-            self.pixels.borrow_mut()[index * 4 + 3] = color[3];
+            pixels[index * 4 + 0] = color[0];
+            pixels[index * 4 + 1] = color[1];
+            pixels[index * 4 + 2] = color[2];
+            pixels[index * 4 + 3] = color[3];
         }
     }
 
     #[allow(dead_code)]
     pub fn rect(&self, x: i32, y: i32, w: i32, h: i32, color: Pixel) {
+        let mut pixels = self.pixels.borrow_mut();
+
         for x in x .. x + w {
             for y in y .. y + h {
-                self.set_pixel(x, y, color);
+                self.set_pixel(&mut pixels, x, y, color);
             }
         }
     }
 
     #[allow(dead_code)]
     pub fn background(&self, color: Pixel) {
+        let mut pixels = self.pixels.borrow_mut();
+
         for x in 0..self.width {
             for y in 0..self.height {
-                self.set_pixel(x as i32, y as i32, color);
+                self.set_pixel(&mut pixels, x as i32, y as i32, color);
             }
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn draw_text(&self, text: &str, x: i32, y: i32) {
+        let mut pixels = self.pixels.borrow_mut();
+        let mut pos = 0;
+
+        for char in text.chars() {
+
+            // skip whitespace
+            if char == ' ' {
+                pos += 8;
+                continue
+            }
+
+            // get data by finding offset in charset
+            let data = FONT[char as usize - FIRST_CHAR as usize];
+
+            // println!("{}, {}", char, char as usize - FIRST_CHAR as usize);
+            // panic!();
+
+            for (yd, line) in data.iter().enumerate() {
+                for (xd, symbol) in line.iter().enumerate() {
+                    if *symbol == ' ' {
+                        continue
+                    }
+
+                    self.set_pixel(&mut pixels, x + pos + xd as i32, y + yd as i32, [255, 255, 255, 255]);
+                }
+            }
+
+            // increment for next character
+            pos += 8;
         }
     }
 }

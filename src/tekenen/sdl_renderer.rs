@@ -81,7 +81,7 @@ impl RendererTrait for SDLRenderer {
             ).unwrap();
 
             tekenen.update();
-    
+
             // convert from [[[[u8]; 3]; WIDTH]; HEIGHT] to [u8; 3 * WIDTH * HEIGHT]
             let pixels: Ref<Pixels> = tekenen.get_pixels();
             // let slice: &[u8; 800 * 600 * 4] = unsafe { std::mem::transmute(&*pixels)};

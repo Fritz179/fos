@@ -1,4 +1,5 @@
 mod tekenen;
+
 use tekenen::*;
 
 use std::rc::Rc;
@@ -21,7 +22,9 @@ impl AppTrait for App {
 
 
         self.renderer.background([51, 51, 51, 255]);
-        self.renderer.rect(self.pos.x, self.pos.y, 50, 50, [255, 0, 0, 255])
+        self.renderer.rect(self.pos.x, self.pos.y, 50, 50, [255, 0, 0, 255]);
+
+        self.renderer.draw_text("Hello there", 10, 20);
     }
 
     fn event_handler(&mut self, event: Event) -> bool {
