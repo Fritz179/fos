@@ -1,5 +1,6 @@
 // TODO: use enum of ' ' and '#' instead of char
 pub const FIRST_CHAR: char = '!';
+pub const LAST_CHAR: char = '~';
 
 pub const FONT: [[[char; 8]; 8]; 94] = [
 

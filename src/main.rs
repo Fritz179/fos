@@ -1,81 +1,96 @@
 mod tekenen;
-
 use tekenen::*;
-
 use std::rc::Rc;
-
-struct Vec2<T> {
-    x: T,
-    y: T
-}
 
 struct App {
     renderer: Rc<Tekenen>,
-    pos: Vec2<i32>,
-    vel: Vec2<i32>
+    buffer: String
 }
 
 impl AppTrait for App {
-    fn update(&mut self) {
-        self.pos.x += self.vel.x * 10;
-        self.pos.y += self.vel.y * 10;
-
-
+    fn update(&mut self, time: u64) {
         self.renderer.background(colors::GRAY);
 
-        self.renderer.rect(self.pos.x, self.pos.y, 50, 50, colors::RED);
-
-        self.renderer.draw_text("Hello there", 10, 20);
+        self.renderer.draw_terminal(&self.buffer, time);
     }
 
     fn event_handler(&mut self, event: Event) -> bool {
         // println!("{:?}", event);
 
         match event {
-            Event::KeyDown { keycode: Some(key), repeat: false, ..} => {
-                // println!("{}", key);
+            Event::KeyDown { keycode: Some(key), keymod, /* repeat: false, */ ..} => {
+                // println!("{}, {:?}", key, keymod);
+
+                let shift_mod: bool = keymod.bits() & (Mod::LSHIFTMOD.bits() | Mod::RSHIFTMOD.bits()) != 0;
+                let ctrl_mod: bool = keymod.bits() & (Mod::LCTRLMOD.bits() | Mod::RCTRLMOD.bits()) != 0;
+                let caps_mod: bool = keymod.bits() & Mod::CAPSMOD.bits() != 0;
 
                 match key {
                     Keycode::Escape => true,
-                    Keycode::W | Keycode::Up => {
-                        self.vel.y -= 1;
+                    Keycode::Return => {
+                        self.buffer.push('\n');
                         false
-                    } ,
-                    Keycode::D | Keycode::Right => {
-                        self.vel.x += 1;
+                    }
+                    Keycode::Space => {
+                        self.buffer.push(' ');
                         false
-                    } ,
-                    Keycode::S | Keycode::Down => {
-                        self.vel.y += 1;
+                    }
+                    Keycode::Backspace => {
+                        if ctrl_mod {
+                            let mut did_delete_char = false; 
+
+                            while self.buffer.len() != 0 {
+                                let char = self.buffer.pop();
+
+                                if let Some(' ') = char {
+                                    if did_delete_char {
+                                        self.buffer.push(' ');
+                                        break
+                                    }
+                                    continue
+                                }
+
+                                // TODO: Could read before deliting and inserting
+                                if let Some('\n') = char {
+                                    self.buffer.push('\n');
+                                    break
+                                }
+
+                                did_delete_char = true;
+                            }
+
+                            return false
+                        }
+
+                        self.buffer.pop();
                         false
-                    } ,
-                    Keycode::A | Keycode::Left => {
-                        self.vel.x -= 1;
-                        false
-                    } ,
-                    _ => false
+                    }
+                    _ => {
+                        const START: i32 = FIRST_CHAR as i32;
+                        const END: i32 = LAST_CHAR as i32;
+
+                        // println!("{}, {}, {:?}", key as i32, END, keymod);
+
+                        let mut capital = 0;
+                        if  shift_mod || caps_mod {
+                            capital = -32
+                        }
+
+                        match key as i32 {
+                            START..=END => {
+                                let chr = char::from_u32((key as i32 + capital) as u32).expect("msg");
+                                self.buffer.push(chr);
+                                false
+                            },
+                            _ => false
+                        }
+                    }
                 }
             },
             Event::KeyUp { keycode: Some(key), repeat: false, ..} => {
                 // println!("{}", key);
 
                 match key {
-                    Keycode::W | Keycode::Up => {
-                        self.vel.y += 1;
-                        false
-                    } ,
-                    Keycode::D | Keycode::Right => {
-                        self.vel.x -= 1;
-                        false
-                    } ,
-                    Keycode::S | Keycode::Down => {
-                        self.vel.y -= 1;
-                        false
-                    } ,
-                    Keycode::A | Keycode::Left => {
-                        self.vel.x += 1;
-                        false
-                    } ,
                     _ => false
                 }
             },
@@ -86,8 +101,7 @@ impl AppTrait for App {
     fn new(renderer: Rc<Tekenen>) -> App {
         App {
             renderer,
-            pos: Vec2 { x: 0, y: 0 },
-            vel: Vec2 { x: 0, y: 0 },
+            buffer: "".to_string()
         }
     }
 }

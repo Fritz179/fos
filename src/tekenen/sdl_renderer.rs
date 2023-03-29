@@ -3,7 +3,7 @@ extern crate sdl2;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::EventPump;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use sdl2::rect::Rect;
 use sdl2::event::Event;
 
@@ -15,6 +15,7 @@ pub struct SDLRenderer {
     canvas: Canvas<Window>,
     event_pump: EventPump,
     tekenen: Weak<Tekenen>,
+    start: SystemTime
 }
 
 impl RendererTrait for SDLRenderer {
@@ -34,7 +35,8 @@ impl RendererTrait for SDLRenderer {
         let renderer = SDLRenderer {
             canvas,
             event_pump,
-            tekenen: Weak::new()
+            tekenen: Weak::new(),
+            start: SystemTime::now()
         };
 
         return Box::new(renderer)
@@ -80,7 +82,8 @@ impl RendererTrait for SDLRenderer {
                 width, height
             ).unwrap();
 
-            tekenen.update();
+            // u64 overflows in 584 554 531 years, should be fine
+            tekenen.update(self.start.elapsed().expect("invalid time!").as_millis() as u64);
 
             // convert from [[[[u8]; 3]; WIDTH]; HEIGHT] to [u8; 3 * WIDTH * HEIGHT]
             let pixels: Ref<Pixels> = tekenen.get_pixels();
