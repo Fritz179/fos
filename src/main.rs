@@ -21,8 +21,9 @@ impl AppTrait for App {
         self.pos.y += self.vel.y * 10;
 
 
-        self.renderer.background([51, 51, 51, 255]);
-        self.renderer.rect(self.pos.x, self.pos.y, 50, 50, [255, 0, 0, 255]);
+        self.renderer.background(colors::GRAY);
+
+        self.renderer.rect(self.pos.x, self.pos.y, 50, 50, colors::RED);
 
         self.renderer.draw_text("Hello there", 10, 20);
     }

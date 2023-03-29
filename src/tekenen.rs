@@ -8,9 +8,11 @@ use sdl_renderer::SDLRenderer;
 
 use std::{cell::{RefCell, Ref}, rc::{Weak, Rc}};
 
-pub type Pixel = [u8; 4];
-// pub type Pixels = Vec<Pixel>;
+
 pub type Pixels = Vec<u8>;
+
+pub mod colors;
+use colors::Pixel;
 
 pub struct Tekenen {
     app: RefCell<Option<Weak<RefCell<dyn AppTrait>>>>,
@@ -93,7 +95,7 @@ impl Tekenen {
                 let mut text = "Update time: ".to_owned();
                 text.push_str(&elapsed.as_micros().to_string());
 
-                self.draw_text(&text, 600, 600 - 16)
+                self.draw_text(&text, 450, 600 - 24)
             }
             Err(e) => {
                 println!("Error: {e:?}");
@@ -159,6 +161,8 @@ impl Tekenen {
 
     #[allow(dead_code)]
     pub fn draw_text(&self, text: &str, x: i32, y: i32) {
+        const FONT_SIZE: i32 = 2;
+
         let mut pixels = self.pixels.borrow_mut();
         let mut pos = 0;
 
@@ -166,7 +170,7 @@ impl Tekenen {
 
             // skip whitespace
             if char == ' ' {
-                pos += 8;
+                pos += 8 * FONT_SIZE;
                 continue
             }
 
@@ -177,17 +181,25 @@ impl Tekenen {
             // panic!();
 
             for (yd, line) in data.iter().enumerate() {
+                let y = y + yd as i32 * FONT_SIZE;
+
                 for (xd, symbol) in line.iter().enumerate() {
+                    let x = x + xd as i32 * FONT_SIZE + pos;
+
                     if *symbol == ' ' {
                         continue
                     }
 
-                    self.set_pixel(&mut pixels, x + pos + xd as i32, y + yd as i32, [255, 255, 255, 255]);
+                    for xf in 0..FONT_SIZE {
+                        for yf in 0..FONT_SIZE {
+                            self.set_pixel(&mut pixels, x + xf, y + yf, colors::WHITE);
+                        }
+                    }
                 }
             }
 
             // increment for next character
-            pos += 8;
+            pos += 8 * FONT_SIZE;
         }
     }
 }
