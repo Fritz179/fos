@@ -26,7 +26,7 @@ pub struct Tekenen {
 pub trait AppTrait {
     fn update(&mut self, time :u64);
     fn event_handler(&mut self, event: Event) -> bool;
-    fn new(renderer: Rc<Tekenen>) -> Self where Self: Sized;
+    fn new(renderer: Rc<Tekenen>) -> Rc<RefCell<Self>> where Self: Sized;
 }
 
 // Available to app
@@ -49,9 +49,7 @@ impl Tekenen {
     }
 
     pub fn new_app<AppStruct: AppTrait + 'static>(tekenen: &Rc<Tekenen>) -> Rc<RefCell<AppStruct>> {
-
-        let app = AppStruct::new(Rc::clone(&tekenen));
-        let appref = Rc::new(RefCell::new(app));
+        let appref = AppStruct::new(Rc::clone(&tekenen));
 
         let traitclone: Rc<RefCell<dyn AppTrait>> = Rc::clone(&appref) as Rc<RefCell<dyn AppTrait>>;
         *tekenen.app.borrow_mut() = Some(Rc::downgrade(&traitclone));

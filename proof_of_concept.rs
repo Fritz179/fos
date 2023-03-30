@@ -1,3 +1,4 @@
+// Cyclical reference
 trait Trait {
     fn fun(&mut self);
     fn new(renderer: Rc<Renderer>) -> Self where Self: Sized;
@@ -56,4 +57,26 @@ fn main() {
     let app = Renderer::new::<App>();
 
     app.borrow_mut().fun();
+}
+
+// colsure with reference to self
+struct X {
+    x: i32,
+}
+
+impl X {
+    fn y(self: Rc<Self>) -> Box<dyn Fn()> {
+        return Box::new(move | |  {
+            println!("Hello there!, {}", self.x)
+        })
+    }
+}
+
+fn main() {
+    let x = Rc::new(X {x: 8});
+
+    let x_clone = Rc::clone(&x);
+    let f = X::y(x_clone);
+
+    f();
 }
