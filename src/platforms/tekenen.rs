@@ -1,114 +1,25 @@
-mod sdl_renderer;
-mod font;
-
+use super::{font, colors, colors::{Pixel}};
 pub use font::{FONT, FIRST_CHAR, LAST_CHAR};
 
-pub use sdl2::{event::Event, keyboard::{Keycode, Mod}};
-use sdl_renderer::SDLRenderer;
-
-use std::{cell::{RefCell, Ref}, rc::{Weak, Rc}};
+use std::{cell::RefCell};
 
 
 pub type Pixels = Vec<u8>;
 
-pub mod colors;
-use colors::Pixel;
 
 pub struct Tekenen {
-    app: RefCell<Option<Weak<RefCell<dyn AppTrait>>>>,
-    renderer: RefCell<Box<dyn RendererTrait>>,
-    pixels: RefCell<Pixels>,
+    pub pixels: RefCell<Pixels>,
     width: usize,
     height: usize
 }
 
-// To be implemented by the running App
-pub trait AppTrait {
-    fn update(&mut self, time :u64);
-    fn event_handler(&mut self, event: Event) -> bool;
-    fn new(renderer: Rc<Tekenen>) -> Rc<RefCell<Self>> where Self: Sized;
-}
-
-// Available to app
 impl Tekenen {
-    pub fn new(width: usize, height: usize) -> Rc<Tekenen> {
-        let renderer = RefCell::new(SDLRenderer::new(width, height, "Salve"));
-
-        let tekenen = Rc::new(Tekenen {
-            app: RefCell::new(None),
-            renderer,
+    pub fn new(width: usize, height: usize) -> Tekenen {
+        Tekenen {
             pixels: RefCell::new(vec![0; width * height * 4]),
-            
             width,
             height
-        });
-
-        tekenen.renderer.borrow_mut().set_tekenen(Rc::clone(&tekenen));
-
-        return tekenen;
-    }
-
-    pub fn new_app<AppStruct: AppTrait + 'static>(tekenen: &Rc<Tekenen>) -> Rc<RefCell<AppStruct>> {
-        let appref = AppStruct::new(Rc::clone(&tekenen));
-
-        let traitclone: Rc<RefCell<dyn AppTrait>> = Rc::clone(&appref) as Rc<RefCell<dyn AppTrait>>;
-        *tekenen.app.borrow_mut() = Some(Rc::downgrade(&traitclone));
-
-        return appref
-    }
-
-    pub fn start(&self, fps: u32) {
-        self.renderer.borrow_mut().start(fps)
-    }
-}
-
-// To be implemented by the renderer
-pub trait RendererTrait {
-    fn new(width: usize, height: usize, name: &str) -> Box<Self> where Self: Sized;
-    fn set_tekenen(&mut self, tekenen: Rc<Tekenen>);
-    fn start(&mut self, fps: u32);
-}
-
-// Available for the renderer
-impl Tekenen {
-    fn get_app(&self) -> Rc<RefCell<dyn AppTrait>> {
-        let mut op = self.app.borrow_mut();
-        if let Some(a) = op.as_mut() {
-            let a = a.upgrade().expect("No app");
-            return a;
-        } else {
-            panic!("No app")
         }
-    }
-
-    pub fn update(&self, time: u64) {
-        let app = self.get_app();
-
-        let now = std::time::SystemTime::now();
-
-        app.borrow_mut().update(time);
-
-        match now.elapsed() {
-            Ok(elapsed) => {
-                let mut text = "Update time: ".to_owned();
-                text.push_str(&elapsed.as_micros().to_string());
-
-                self.draw_text(&text, 450, 600 - 24);
-            }
-            Err(e) => {
-                println!("Error: {e:?}");
-            }
-        }
-    }
-
-    pub fn event_handler(&self, event: Event) -> bool {
-        let app = self.get_app();
-
-        return app.borrow_mut().event_handler(event);
-    }
-
-    pub fn get_pixels(&self) -> Ref<Pixels> {
-        return self.pixels.borrow()
     }
 }
 
@@ -222,9 +133,4 @@ impl Tekenen {
             self.rect(x, y, 16, 16, colors::WHITE)
         }   
     }
-}
-
-pub trait AppTraits {
-    fn update(&mut self, tekenen: &mut Tekenen);
-    fn event_handler(&mut self, event: Event) -> bool;
 }

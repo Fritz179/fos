@@ -1,37 +1,29 @@
-use std::{rc::{Rc, Weak}, cell::RefCell};
-use crate::{STD_IN, Tekenen, AppManager};
+use std::{rc::Rc, cell::RefCell};
+use crate::{Tekenen, Pid, Fs, Process};
 
 pub struct Terminal {
-    buffer: RefCell<String>,
-    parent: Weak<RefCell<AppManager>>,
+    buffer: Rc<RefCell<String>>,
+    pid: Pid,
 }
 
-impl Terminal {
-    pub fn new(parent: Weak<RefCell<AppManager>>) -> Terminal {
+impl Process for Terminal {
+    fn new(pid: Pid) -> Terminal {
         Terminal { 
-            buffer: RefCell::new(String::new()),
-            parent,
+            buffer: Rc::new(RefCell::new(String::new())),
+            pid
         }
     }
 
-    fn exec(&self) {
-        println!("Hello there!")
+    fn main(&self, fs: &Fs) {
+        let buffer = Rc::clone(&self.buffer);
+        fs.read(self.pid, 0, Box::new(move |c| {
+            buffer.borrow_mut().push(c)
+        }));
     }
+}
 
-    pub fn main(&self, weak_self: Weak<Self>) {
-
-        self.parent.upgrade().expect("No parent").borrow_mut().read(STD_IN, Box::new(move | c | {
-
-            let this = weak_self.upgrade().expect("msg");
-            this.buffer.borrow_mut().push(c);
-
-            if c == '\n' {
-                this.exec();
-            }
-        }))
-    }
-
-    pub fn render(&self, renderer: &Rc<Tekenen>, time: u64) {
+impl Terminal {
+    pub fn render(&self, renderer: &Tekenen, time: u64) {
         renderer.draw_terminal(&self.buffer.borrow(), time);
     }
 }
