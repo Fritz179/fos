@@ -10,3 +10,4 @@ opt-level = 1
 
 [dependencies]
 sdl2 = "0.35"
+debug-cell = "0.1.1"

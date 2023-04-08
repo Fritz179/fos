@@ -2,6 +2,9 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{proc::{Proc, Process}, STDOUT, STDIN};
 
+mod echo;
+use echo::EchoProgram;
+
 pub struct Shell {
     proc: Proc,
     buffer: RefCell<String>
@@ -46,7 +49,23 @@ impl Shell {
 
                     match command {
                         "echo" => {
-                            println!("Echo!")
+                            let (echo, echo_id) = self_clone.proc.spawn::<EchoProgram>();
+
+                            // pipe stdin to shell stdin
+                            let self_clone_clone = Rc::clone(&self_clone);
+                            self_clone.proc.read(STDIN, Box::new(move |char|{
+                                let fs = self_clone_clone.proc.fs.upgrade().expect("No Fs");
+                                fs.write(echo_id, 0, char);
+                            }));
+                    
+                            // pipe shell stdout to terminal
+                            let self_clone_clone = Rc::clone(&self_clone);
+                            let fs = self_clone.proc.fs.upgrade().expect("No Fs");
+                            fs.read(echo_id, STDOUT, Box::new(move |char|{
+                                self_clone_clone.proc.write(STDOUT, char)
+                            }));
+                    
+                            echo.main(strings);
                         }
                         _ => {
                             for char in "Invalid command!\n".chars() {

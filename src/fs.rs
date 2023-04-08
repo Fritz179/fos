@@ -1,4 +1,6 @@
-use std::{cell::RefCell, fmt};
+use std::{fmt};
+use debug_cell::RefCell;
+// use std::cell::RefCell;
 
 use crate::Pid;
 
@@ -15,7 +17,7 @@ pub struct Fs {
 }
 
 impl Fs {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Fs {
             readers_map: RefCell::new(vec![]),
             pid_map: RefCell::new(vec![]),
@@ -51,13 +53,19 @@ impl Fs {
         
         let mut readers = self.readers_map.borrow_mut();
         let readers = readers.get_mut(raw as usize).expect("No raders");
+
         readers.push(callback);
     }
 
     pub fn write(&self, pid: Pid, descriptor: FileDescriptor, char: char) {
-        let pid_map = self.pid_map.borrow();
-        let pid_map = pid_map.get(pid as usize).expect("No PID mapping");
-        let raw = *pid_map.get(descriptor as usize).expect("No descriptor");
+        let mut raw = 0;
+
+        {
+            let pid_map = self.pid_map.borrow();
+            let pid_map = pid_map.get(pid as usize).expect("No PID mapping");
+            raw = *pid_map.get(descriptor as usize).expect("No descriptor");
+        }
+
         
         let readers = self.readers_map.borrow();
         let readers = readers.get(raw as usize).expect("No raders");

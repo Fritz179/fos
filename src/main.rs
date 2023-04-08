@@ -47,7 +47,7 @@ impl Root {
         // pipe shell stdout to terminal
         let self_clone = Rc::clone(&self);
         let fs = self_clone.proc.fs.upgrade().expect("No Fs");
-        fs.read(shell_pid, 1, Box::new(move |char|{
+        fs.read(shell_pid, STDOUT, Box::new(move |char|{
             self_clone.terminal.write(char);
         }));
 
