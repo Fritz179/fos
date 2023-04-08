@@ -9,7 +9,6 @@ use std::time::{SystemTime};
 
 pub mod font;
 pub mod colors;
-pub use colors::Pixels;
 
 mod tekenen;
 pub use tekenen::Tekenen;
@@ -106,6 +105,10 @@ impl SDLPlatform {
                         // Standard ascii code
                         if charcode >= ' ' as u32 && charcode <= '~' as u32 {
                             char = char::from_u32(charcode);
+                        }
+
+                        if keycode == Keycode::Return  {
+                            char = Some('\n')
                         }
 
                         return Some(Event::KeyDown {

@@ -1,5 +1,4 @@
 pub type Pixel = [u8; 4];
-pub type Pixels = Vec<u8>;
 
 #[allow(dead_code)]
 pub const WHITE: Pixel = [255, 255, 255, 255];
