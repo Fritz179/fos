@@ -3,6 +3,10 @@ use std::{cell::RefCell, fmt};
 use crate::Pid;
 
 pub type FileDescriptor = u32;
+pub const STDIN: FileDescriptor = 0;
+pub const STDOUT: FileDescriptor = 1;
+pub const STDERR: FileDescriptor = 2;
+
 type Readers = Vec<Box<dyn Fn(char)>>;
 
 pub struct Fs {
@@ -41,7 +45,7 @@ impl Fs {
     }
 
     pub fn read(&self, pid: Pid, descriptor: FileDescriptor, callback: Box<dyn Fn(char)>) {
-        let pid_map = self.pid_map.borrow_mut();
+        let pid_map = self.pid_map.borrow();
         let pid_map = pid_map.get(pid as usize).expect("No PID mapping");
         let raw = *pid_map.get(descriptor as usize).expect("No descriptor");
         
@@ -51,7 +55,7 @@ impl Fs {
     }
 
     pub fn write(&self, pid: Pid, descriptor: FileDescriptor, char: char) {
-        let pid_map = self.pid_map.borrow_mut();
+        let pid_map = self.pid_map.borrow();
         let pid_map = pid_map.get(pid as usize).expect("No PID mapping");
         let raw = *pid_map.get(descriptor as usize).expect("No descriptor");
         
@@ -72,3 +76,11 @@ impl fmt::Debug for Fs {
          .finish()
     }
 }
+
+// -	Regular or ordinary file
+// d	Directory file
+// l	Link file
+// b	Block special file => buffered access, chunks of data
+// p	Named pipe file => interproces communication
+// c	Character special file => direct access, byte by byte
+// s	Socket file => ip:socket

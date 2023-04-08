@@ -12,6 +12,9 @@ pub use fs::*;
 mod terminal;
 use terminal::Terminal;
 
+mod shell;
+use shell::Shell;
+
 pub struct Root {
     platform: RefCell<Box<SDLPlatform>>,
     tekenen: Tekenen,
@@ -28,17 +31,29 @@ impl Process for Root {
             proc
         }
     }
-
-    fn main(self: Rc<Self>) {
-        let self_clone = Rc::clone(&self);
-
-        self.proc.read(0, Box::new(move |c|{
-            self_clone.terminal.write(c);
-        }))
-    }
 }
 
 impl Root {
+    fn main(self: &Rc<Self>) {
+        let (shell, shell_pid) = self.proc.spawn::<Shell>();
+
+        // pipe stdin to shell stdin
+        let self_clone = Rc::clone(&self);
+        self.proc.read(STDIN, Box::new(move |char|{
+            let fs = self_clone.proc.fs.upgrade().expect("No Fs");
+            fs.write(shell_pid, 0, char);
+        }));
+
+        // pipe shell stdout to terminal
+        let self_clone = Rc::clone(&self);
+        let fs = self_clone.proc.fs.upgrade().expect("No Fs");
+        fs.read(shell_pid, 1, Box::new(move |char|{
+            self_clone.terminal.write(char);
+        }));
+
+        shell.main();
+    }
+
     fn update(&self) -> bool {
         let mut platform = self.platform.borrow_mut();
 
@@ -79,12 +94,12 @@ impl fmt::Debug for Root {
     }
 }
 
-
 fn main() {
     let fs = Rc::new(Fs::new());
     let spawner = Rc::new(Spawner::new(Rc::clone(&fs)));
 
-    let root = spawner.spawn::<Root>();
+    let (root, _pid) = spawner.spawn::<Root>();
+    root.main();
 
     println!("{:?}", spawner);
 

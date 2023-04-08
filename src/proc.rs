@@ -6,12 +6,12 @@ pub type Pid = u32;
 
 pub trait Process {
     fn new(proc: Proc) -> Self where Self: Sized;
-    fn main(self: Rc<Self>);
 }
 
 pub struct Proc {
     pid: Pid,
-    fs: Weak<Fs>,
+    pub fs: Weak<Fs>,
+    children: RefCell<Vec<Rc<dyn Process>>>,
     spawner: Weak<Spawner>,
 }
 
@@ -21,8 +21,20 @@ impl Proc {
             pid, 
             fs,
             spawner,
+            children: RefCell::new(vec![])
         }
     }
+
+    pub fn spawn<Child: Process + 'static>(&self) -> (Rc<Child>, Pid) {
+        let spawner = self.spawner.upgrade().expect("No Spawner");
+        let mut children = self.children.borrow_mut();
+
+        let (child, pid) = spawner.spawn::<Child>();
+        let child_clone = Rc::clone(&child);
+        children.push(child_clone);
+
+        return (child, pid)
+    }  
 
     pub fn open(&self) -> FileDescriptor {
         let fs = self.fs.upgrade().expect("No FS found");
@@ -57,7 +69,7 @@ impl Spawner {
         }
     }
 
-    pub fn spawn<Child: Process + 'static>(self: &Rc<Self>) -> Rc<Child> {
+    pub fn spawn<Child: Process + 'static>(self: &Rc<Self>) -> (Rc<Child>, Pid) {
         let mut processes = self.processes.borrow_mut();
 
         let child_pid = processes.len() as Pid;
@@ -72,8 +84,8 @@ impl Spawner {
         let child = Rc::new(Child::new(child_proc));
         processes.push(Rc::downgrade(&child) as Weak<dyn Process>);
 
-        Rc::clone(&child).main();
+        drop(processes);
 
-        return child
+        return (child, child_pid)
     }
 }
