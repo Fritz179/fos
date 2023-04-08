@@ -14,7 +14,7 @@ impl Process for Terminal {
         }
     }
 
-    fn main(&self, fs: &Fs) {
+    fn main(self: &Rc<Self>, fs: &Fs) {
         let buffer = Rc::clone(&self.buffer);
         fs.read(self.pid, 0, Box::new(move |c| {
             buffer.borrow_mut().push(c)
@@ -27,3 +27,12 @@ impl Terminal {
         renderer.draw_terminal(&self.buffer.borrow(), time);
     }
 }
+
+
+// -	Regular or ordinary file
+// d	Directory file
+// l	Link file
+// b	Block special file => buffered access, chunks of data
+// p	Named pipe file => interproces communication
+// c	Character special file => direct access, byte by byte
+// s	Socket file => ip:socket
