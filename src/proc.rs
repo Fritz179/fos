@@ -9,10 +9,11 @@ pub trait Process {
 }
 
 pub struct Proc {
-    pid: Pid,
     pub fs: Weak<Fs>,
+    pid: Pid,
     children: RefCell<Vec<Rc<dyn Process>>>,
     spawner: Weak<Spawner>,
+    // descriptorMap
 }
 
 impl Proc {

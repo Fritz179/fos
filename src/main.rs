@@ -15,6 +15,9 @@ use terminal::Terminal;
 mod shell;
 use shell::Shell;
 
+mod map;
+pub use map::Table;
+
 pub struct Root {
     platform: RefCell<Box<SDLPlatform>>,
     tekenen: Tekenen,
