@@ -1,5 +1,4 @@
-use debug_cell::RefCell;
-use std::fmt;
+use std::{fmt, collections::VecDeque, rc::Rc, cell::RefCell};
 // use std::cell::RefCell;
 
 use crate::Pid;
@@ -84,6 +83,10 @@ impl fmt::Debug for Fs {
     }
 }
 
+// pipes -> multiple sender, single reciver
+// using Futures -> read one char per Future
+// open also has await? Performance = more state
+
 // -	Regular or ordinary file
 // d	Directory file
 // l	Link file
@@ -91,3 +94,60 @@ impl fmt::Debug for Fs {
 // p	Named pipe file => interproces communication
 // c	Character special file => direct access, byte by byte
 // s	Socket file => ip:socket
+
+struct Shared<T> {
+    buffer: RefCell<VecDeque<T>>
+}
+
+struct Tx<T> {
+    shared: Rc<Shared<T>>
+}
+
+impl<T> Tx<T> {
+    fn send(&self, data: T) {
+        self.shared.buffer.borrow_mut().push_back(data);
+    }
+}
+
+struct Rx<T> {
+    shared: Rc<Shared<T>>
+}
+
+use crate::future::{Future, Poll, Context};
+use std::pin::Pin;
+
+impl<T> Future for Rx<T> {
+    type Output = T;
+    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<T> {
+        let mut buffer = self.shared.buffer.borrow_mut();
+        let data = buffer.pop_front();
+        drop(buffer);
+
+        if let Some(data) = data {
+            Poll::Ready(data)
+        } else {
+            Poll::Pending
+        }
+    }
+}
+
+fn create_pipe<T>() -> (Tx<T>, Rx<T>) {
+    let shared = Rc::new(
+        Shared {
+            buffer: RefCell::new(VecDeque::new()),
+        }
+    );
+
+    let tx = Tx {
+        shared: Rc::clone(&shared)
+    };
+
+    let rx = Rx {
+        shared
+    };
+
+    return (
+        tx,
+        rx
+    )
+}
