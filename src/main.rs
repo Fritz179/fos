@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt, rc::Rc, future::Future, pin::Pin, task::{Context, Poll, Waker, RawWaker, RawWakerVTable}};
+use std::{cell::RefCell, fmt, rc::Rc};
 
 mod platforms;
 use platforms::{Event, SDLPlatform, Tekenen};
@@ -103,7 +103,11 @@ impl fmt::Debug for Root {
     }
 }
 
+pub mod future;
+
 fn main() {
+    future::tst();
+
     let fs = Rc::new(Fs::new());
     let spawner = Rc::new(Spawner::new(Rc::clone(&fs)));
 
