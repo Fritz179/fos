@@ -1,5 +1,5 @@
-use std::{rc::Rc, cell::RefCell};
-use crate::{Tekenen};
+use crate::Tekenen;
+use std::{cell::RefCell, rc::Rc};
 
 pub struct Terminal {
     buffer: Rc<RefCell<String>>,

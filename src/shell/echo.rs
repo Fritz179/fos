@@ -1,14 +1,18 @@
-use crate::{proc::{Proc, Process}, STDOUT};
+use crate::{
+    proc::{Proc, Process},
+    STDOUT,
+};
 
 pub struct EchoProgram {
-    proc: Proc
+    proc: Proc,
 }
 
 impl Process for EchoProgram {
-    fn new(proc: Proc) -> Self where Self: Sized {
-        EchoProgram {
-            proc
-        }
+    fn new(proc: Proc) -> Self
+    where
+        Self: Sized,
+    {
+        EchoProgram { proc }
     }
 }
 

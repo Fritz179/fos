@@ -1,16 +1,14 @@
-use super::{font, colors, colors::{Pixel}};
-pub use font::{FONT, FIRST_CHAR, LAST_CHAR};
+use super::{colors, colors::Pixel, font};
+pub use font::{FIRST_CHAR, FONT, LAST_CHAR};
 
-use std::{cell::RefCell};
-
+use std::cell::RefCell;
 
 pub type Pixels = Vec<u8>;
-
 
 pub struct Tekenen {
     pub pixels: RefCell<Pixels>,
     width: usize,
-    height: usize
+    height: usize,
 }
 
 impl Tekenen {
@@ -18,7 +16,7 @@ impl Tekenen {
         Tekenen {
             pixels: RefCell::new(vec![0; width * height * 4]),
             width,
-            height
+            height,
         }
     }
 }
@@ -27,17 +25,14 @@ impl Tekenen {
 impl Tekenen {
     pub fn pixel_index(&self, x: i32, y: i32) -> Option<usize> {
         if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 {
-            return None
+            return None;
         }
 
-        return Some((y * self.width as i32 + x) as usize)
+        return Some((y * self.width as i32 + x) as usize);
     }
 
     pub fn set_pixel(&self, pixels: &mut Pixels, x: i32, y: i32, color: Pixel) {
-        
-
         if let Some(index) = self.pixel_index(x, y) {
-
             // self.pixels.borrow_mut()[index] = color;
             pixels[index * 4 + 0] = color[0];
             pixels[index * 4 + 1] = color[1];
@@ -50,8 +45,8 @@ impl Tekenen {
     pub fn rect(&self, x: i32, y: i32, w: i32, h: i32, color: Pixel) {
         let mut pixels = self.pixels.borrow_mut();
 
-        for x in x .. x + w {
-            for y in y .. y + h {
+        for x in x..x + w {
+            for y in y..y + h {
                 self.set_pixel(&mut pixels, x, y, color);
             }
         }
@@ -83,14 +78,14 @@ impl Tekenen {
                 curr_y += FONT_SIZE;
 
                 if char == '\n' {
-                    continue
+                    continue;
                 }
             }
 
             // skip whitespace
             if char == ' ' {
                 curr_x += FONT_SIZE;
-                continue
+                continue;
             }
 
             // get data by finding offset in charset
@@ -106,7 +101,7 @@ impl Tekenen {
                     let x = x + xd as i32 * FONT_SCALE + curr_x;
 
                     if *symbol == ' ' {
-                        continue
+                        continue;
                     }
 
                     for xf in 0..FONT_SCALE {
@@ -121,7 +116,7 @@ impl Tekenen {
             curr_x += FONT_SIZE;
         }
 
-        return (curr_x, curr_y)
+        return (curr_x, curr_y);
     }
 
     pub fn draw_terminal(&self, buffer: &String, time: u64) {
@@ -131,6 +126,6 @@ impl Tekenen {
 
         if time % BLINKING_TIME > BLINKING_TIME / 2 {
             self.rect(x, y, 16, 16, colors::WHITE)
-        }   
+        }
     }
 }

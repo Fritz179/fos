@@ -1,11 +1,16 @@
-use std::{rc::{Rc, Weak}, cell::RefCell};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
-use crate::{Fs, FileDescriptor};
+use crate::{FileDescriptor, Fs};
 
 pub type Pid = u32;
 
 pub trait Process {
-    fn new(proc: Proc) -> Self where Self: Sized;
+    fn new(proc: Proc) -> Self
+    where
+        Self: Sized;
 }
 
 pub struct Proc {
@@ -19,10 +24,10 @@ pub struct Proc {
 impl Proc {
     fn new(pid: Pid, fs: Weak<Fs>, spawner: Weak<Spawner>) -> Self {
         Proc {
-            pid, 
+            pid,
             fs,
             spawner,
-            children: RefCell::new(vec![])
+            children: RefCell::new(vec![]),
         }
     }
 
@@ -34,8 +39,8 @@ impl Proc {
         let child_clone = Rc::clone(&child);
         children.push(child_clone);
 
-        return (child, pid)
-    }  
+        return (child, pid);
+    }
 
     pub fn open(&self) -> FileDescriptor {
         let fs = self.fs.upgrade().expect("No FS found");
@@ -59,14 +64,14 @@ impl Proc {
 #[derive(Debug)]
 pub struct Spawner {
     processes: RefCell<Vec<Weak<dyn Process>>>,
-    fs: Rc<Fs>
+    fs: Rc<Fs>,
 }
 
 impl Spawner {
     pub fn new(fs: Rc<Fs>) -> Self {
         Spawner {
             processes: RefCell::new(vec![]),
-            fs
+            fs,
         }
     }
 
@@ -87,6 +92,6 @@ impl Spawner {
 
         drop(processes);
 
-        return (child, child_pid)
+        return (child, child_pid);
     }
 }

@@ -1,14 +1,14 @@
 use std::cell::RefCell;
 
 pub struct Table<T> {
-    items: RefCell<Vec<Option<T>>>
+    items: RefCell<Vec<Option<T>>>,
 }
 
 impl<'a, T> Table<T> {
     fn new() -> Self {
-        Table { 
-            items: RefCell::new(vec![])
-         }
+        Table {
+            items: RefCell::new(vec![]),
+        }
     }
 
     fn add(&self, element: T) -> u32 {
@@ -38,10 +38,10 @@ impl<'a, T> Table<T> {
         if let Some(item) = item {
             if let Some(item) = item {
                 callback(item);
-                return true 
-            } 
-        } 
-    
-        return false
+                return true;
+            }
+        }
+
+        return false;
     }
 }

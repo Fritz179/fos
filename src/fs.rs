@@ -1,5 +1,5 @@
-use std::{fmt};
 use debug_cell::RefCell;
+use std::fmt;
 // use std::cell::RefCell;
 
 use crate::Pid;
@@ -50,7 +50,7 @@ impl Fs {
         let pid_map = self.pid_map.borrow();
         let pid_map = pid_map.get(pid as usize).expect("No PID mapping");
         let raw = *pid_map.get(descriptor as usize).expect("No descriptor");
-        
+
         let mut readers = self.readers_map.borrow_mut();
         let readers = readers.get_mut(raw as usize).expect("No raders");
 
@@ -66,10 +66,9 @@ impl Fs {
             raw = *pid_map.get(descriptor as usize).expect("No descriptor");
         }
 
-        
         let readers = self.readers_map.borrow();
         let readers = readers.get(raw as usize).expect("No raders");
-        
+
         for reader in readers.iter() {
             reader(char);
         }
@@ -79,9 +78,9 @@ impl Fs {
 impl fmt::Debug for Fs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Fs")
-        //  .field("x", &self.x)
-        //  .field("y", &self.y)
-         .finish()
+            //  .field("x", &self.x)
+            //  .field("y", &self.y)
+            .finish()
     }
 }
 
