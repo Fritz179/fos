@@ -1,6 +1,8 @@
-use std::pin::Pin;
+use std::{pin::Pin, process::Output, rc::Rc};
 
 pub use std::{future::Future, task::{Poll, Context}};
+
+use debug_cell::{RefCell, RefMut};
 
 struct Task {
     char: char,
@@ -20,7 +22,7 @@ impl Future for Task {
     type Output = u32;
     fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
         println!("Task polled! {}", self.char);
-        if self.time >= 2 {
+        if self.time >= 5 {
             println!("Ready task: {}, time: {}", self.char, self.time);
             Poll::Ready(self.time)
         } else {
@@ -31,51 +33,132 @@ impl Future for Task {
     }
 }
 
-async fn t(c1: char, c2: char) -> u32 {
+async fn t(c1: char) -> u32 {
     let t1 = Task::new(c1);
-    let t2 = Task::new(c2);
-
-    println!("1");
-    t1.await;
-    println!("2");
-    let t = t2.await;
-    println!("3");
-    return t;
+    return t1.await;
 }
 
+async fn tu(c1: char) {
+    let t1 = Task::new(c1);
+    t1.await;
+}
+
+// global executor with dynamic return type => Box / Option<Box>
+
 pub fn tst() {
-    // let mut t1 = Task::new('a');
-    let mut t1 = t('a', 'b');
-    // let mut t2 = Task::new('b');
-    let mut t2 = t('d', 'e');
+    let mut tvec = vec![];
+
+    let mut t1 = t('a');
+    tvec.push(&mut t1);
 
     println!("Starting tasks");
 
-    let ts = vec![&mut t1, &mut t2];
+    // let ts: i32 = vec![&mut t1];
     
-    let t = block_on(ts);
+    block_all(tvec);
 
     println!("Task Ended");
+
+    tst2()
 }
 
-fn block_on<F: Future>(futures: Vec<&mut F>) -> Vec<F::Output> {
-    let x: u64 = 0;
-    let mut cx = unsafe { std::mem::transmute(&x) };
+fn tst2() {
+    let executor = Executor::new();
 
-    struct Fholder<'a, F: Future> {
+    let mut t1 = tu('c');
+    let mut t2 = tu('d');
+
+    executor.add_task(&mut t1);
+    executor.add_task(&mut t2);
+
+    executor.execute();
+}
+
+struct Poller<'a, F: Future<Output = ()> + ?Sized> {
+    task: RefCell<Pin<&'a mut F>>,
+}
+
+impl<'a, F: Future<Output = ()> + ?Sized> Poller<'a, F> {
+    fn poll(&self) {
+        let fake_cx: u64 = 0;
+        let mut fake_cx: Context = unsafe { std::mem::transmute(&fake_cx) };
+
+        match Future::poll(self.task.borrow_mut().as_mut(), &mut fake_cx) {
+            Poll::Ready(()) => {
+
+            },
+            Poll::Pending => {  },
+        };
+    }
+}
+
+struct Executor<'a> {
+    tasks: RefCell<Vec<Box<Poller<'a, dyn Future<Output = ()>>>>>,
+}
+
+impl<'a> Executor<'a> {
+    fn new() -> Executor<'a> {
+        Executor {
+            tasks: RefCell::new(vec![]),
+        }
+    }
+
+    fn add_task<F: Future<Output = ()> + 'a>(&self, task: &'a mut F) {
+        let mut tasks = self.tasks.borrow_mut();
+
+        // let task = unsafe {
+        //     Pin::new(&mut (task as &'a mut dyn Future<Output = ()>) )
+        // }; // as Pin<&'a mut dyn Future<Output = ()> + !Unpin>;
+
+        let mut task = task as &'a mut dyn Future<Output = ()>;
+
+        let poller = Poller {
+            task: RefCell::new(unsafe { std::mem::transmute(Pin::new_unchecked(task)) })
+        };
+
+        tasks.push(Box::new(poller));
+    }
+
+    fn execute(&self) {
+        self.tasks.borrow().iter().for_each(|poller| {
+            poller.poll();
+        })
+    }
+}
+
+// block one single task
+fn block<F: Future>(future: &mut F) -> F::Output {
+    let fake_cx: u64 = 0;
+    let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+
+    // SAFETY: we shadow `future` so it can't be accessed again.
+    let mut future = unsafe { Pin::new_unchecked(future) };
+
+    loop {
+        match Future::poll(future.as_mut(), &mut fake_cx) {
+            Poll::Ready(val) => {
+                return  val;
+            },
+            Poll::Pending => { },
+        };
+    }
+}
+
+// block a vector of tasks
+fn block_all<F: Future>(futures: Vec<&mut F>) -> Vec<F::Output> {
+    let fake_cx: u64 = 0;
+    let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+
+    struct FutureHolder<'a, F: Future> {
         future: Pin<&'a mut F>,
         done: bool,
         output: Option<F::Output>,
     }
 
-    let mut futures = futures.into_iter().map(|f| unsafe {
-        Pin::new_unchecked(f)
-    });
-
     // SAFETY: we shadow `future` so it can't be accessed again.
-    let mut futures: Vec<Fholder<F>> = futures.into_iter().map(|f| 
-        Fholder {
-            future: f,
+    let mut futures: Vec<FutureHolder<F>> = futures.into_iter().map(|f| 
+        FutureHolder {
+            future: unsafe { Pin::new_unchecked(f) },
             done: false,
             output: None
         }
@@ -86,7 +169,7 @@ fn block_on<F: Future>(futures: Vec<&mut F>) -> Vec<F::Output> {
 
         futures.iter_mut().for_each(|future| {
             if !future.done {
-                match Future::poll(future.future.as_mut(), &mut cx) {
+                match Future::poll(future.future.as_mut(), &mut fake_cx) {
                     Poll::Ready(val) => {
                         future.done = true;
                         future.output = Some(val);
@@ -105,10 +188,7 @@ fn block_on<F: Future>(futures: Vec<&mut F>) -> Vec<F::Output> {
         }
     };
 
-    let t: Vec<F::Output> = futures.into_iter().map(|t| t.output.expect("No output")).collect();
-
-    return t
+    // return only the outputs, in same order as recived order
+    futures.into_iter().map(|t| t.output.expect("Promis must be completed")).collect()
 }
-
-// Unused ?
 
