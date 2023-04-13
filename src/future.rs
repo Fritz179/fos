@@ -1,4 +1,4 @@
-use std::{pin::Pin, process::Output, rc::Rc};
+use std::{pin::Pin, process::Output, rc::Rc, task};
 
 pub use std::{future::Future, task::{Poll, Context}};
 
@@ -65,11 +65,11 @@ pub fn tst() {
 fn tst2() {
     let executor = Executor::new();
 
-    let mut t1 = tu('c');
-    let mut t2 = tu('d');
+    let t1 = tu('c');
+    let t2 = tu('d');
 
-    executor.add_task(&mut t1);
-    executor.add_task(&mut t2);
+    executor.add_task(t1);
+    executor.add_task(t2);
 
     executor.execute();
 }
@@ -92,37 +92,46 @@ impl<'a, F: Future<Output = ()> + ?Sized> Poller<'a, F> {
     }
 }
 
-struct Executor<'a> {
-    tasks: RefCell<Vec<Box<Poller<'a, dyn Future<Output = ()>>>>>,
+struct Executor {
+    tasks: RefCell<Vec<Option<Box<RefCell<dyn Future<Output = ()>>>>>>,
 }
 
-impl<'a> Executor<'a> {
-    fn new() -> Executor<'a> {
+impl Executor {
+    fn new() -> Executor {
         Executor {
             tasks: RefCell::new(vec![]),
         }
     }
 
-    fn add_task<F: Future<Output = ()> + 'a>(&self, task: &'a mut F) {
+    fn add_task<F: Future<Output = ()> + 'static>(&self, task: F) {
         let mut tasks = self.tasks.borrow_mut();
 
-        // let task = unsafe {
-        //     Pin::new(&mut (task as &'a mut dyn Future<Output = ()>) )
-        // }; // as Pin<&'a mut dyn Future<Output = ()> + !Unpin>;
-
-        let mut task = task as &'a mut dyn Future<Output = ()>;
-
-        let poller = Poller {
-            task: RefCell::new(unsafe { std::mem::transmute(Pin::new_unchecked(task)) })
-        };
-
-        tasks.push(Box::new(poller));
+        tasks.push(Some(Box::new(RefCell::new(task))));
     }
 
     fn execute(&self) {
-        self.tasks.borrow().iter().for_each(|poller| {
-            poller.poll();
-        })
+        let mut tasks = self.tasks.borrow_mut();
+
+        for i in 0..tasks.len() {
+            if let Some(task) = tasks.get(i).unwrap() {
+                let mut pinned = unsafe {
+                    Pin::new_unchecked( task.borrow_mut())
+                };
+    
+                let fake_cx: u64 = 0;
+                let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+    
+                match Future::poll(pinned.as_mut(), &mut fake_cx) {
+                    Poll::Ready(()) => {
+                        drop(pinned);
+                        tasks[i] = None;
+                    },
+                    Poll::Pending => {
+      
+                     },
+                }
+            }
+        }
     }
 }
 
