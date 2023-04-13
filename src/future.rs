@@ -1,8 +1,8 @@
-use std::{pin::Pin, process::Output, rc::Rc, task};
+use std::{pin::Pin};
 
 pub use std::{future::Future, task::{Poll, Context}};
 
-use debug_cell::{RefCell, RefMut};
+use debug_cell::RefCell;
 
 struct Task {
     char: char,
@@ -33,36 +33,14 @@ impl Future for Task {
     }
 }
 
-async fn t(c1: char) -> u32 {
-    let t1 = Task::new(c1);
-    return t1.await;
-}
+use crate::Table;
 
 async fn tu(c1: char) {
     let t1 = Task::new(c1);
     t1.await;
 }
 
-// global executor with dynamic return type => Box / Option<Box>
-
 pub fn tst() {
-    let mut tvec = vec![];
-
-    let mut t1 = t('a');
-    tvec.push(&mut t1);
-
-    println!("Starting tasks");
-
-    // let ts: i32 = vec![&mut t1];
-    
-    block_all(tvec);
-
-    println!("Task Ended");
-
-    tst2()
-}
-
-fn tst2() {
     let executor = Executor::new();
 
     let t1 = tu('c');
@@ -71,67 +49,49 @@ fn tst2() {
     executor.add_task(t1);
     executor.add_task(t2);
 
-    executor.execute();
-}
-
-struct Poller<'a, F: Future<Output = ()> + ?Sized> {
-    task: RefCell<Pin<&'a mut F>>,
-}
-
-impl<'a, F: Future<Output = ()> + ?Sized> Poller<'a, F> {
-    fn poll(&self) {
-        let fake_cx: u64 = 0;
-        let mut fake_cx: Context = unsafe { std::mem::transmute(&fake_cx) };
-
-        match Future::poll(self.task.borrow_mut().as_mut(), &mut fake_cx) {
-            Poll::Ready(()) => {
-
-            },
-            Poll::Pending => {  },
-        };
+    loop {
+        if executor.execute() {
+            break
+        }
     }
 }
 
 struct Executor {
-    tasks: RefCell<Vec<Option<Box<RefCell<dyn Future<Output = ()>>>>>>,
+    tasks: Table<Box<RefCell<dyn Future<Output = ()>>>>,
 }
 
 impl Executor {
-    fn new() -> Executor {
+    fn new() -> Self {
         Executor {
-            tasks: RefCell::new(vec![]),
+            tasks: Table::new(),
         }
     }
 
     fn add_task<F: Future<Output = ()> + 'static>(&self, task: F) {
-        let mut tasks = self.tasks.borrow_mut();
-
-        tasks.push(Some(Box::new(RefCell::new(task))));
+        self.tasks.add(Box::new(RefCell::new(task)));
     }
 
-    fn execute(&self) {
-        let mut tasks = self.tasks.borrow_mut();
+    fn execute(&self) -> bool {
+        let count = self.tasks.filter(Box::new(|task: &Box<RefCell<dyn Future<Output = ()>>>| -> bool {
+            let mut pinned = unsafe {
+                Pin::new_unchecked( task.borrow_mut())
+            };
 
-        for i in 0..tasks.len() {
-            if let Some(task) = tasks.get(i).unwrap() {
-                let mut pinned = unsafe {
-                    Pin::new_unchecked( task.borrow_mut())
-                };
-    
-                let fake_cx: u64 = 0;
-                let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
-    
-                match Future::poll(pinned.as_mut(), &mut fake_cx) {
-                    Poll::Ready(()) => {
-                        drop(pinned);
-                        tasks[i] = None;
-                    },
-                    Poll::Pending => {
-      
-                     },
-                }
+            let fake_cx: u64 = 0;
+            let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+
+            match Future::poll(pinned.as_mut(), &mut fake_cx) {
+                Poll::Ready(()) => {
+                    false
+                },
+                Poll::Pending => {
+                    true
+                 },
             }
-        }
+        }));
+
+        println!("{count}");
+        return count == 0;
     }
 }
 

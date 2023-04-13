@@ -16,8 +16,8 @@ use terminal::Terminal;
 mod shell;
 use shell::Shell;
 
-mod map;
-pub use map::Table;
+mod table;
+pub use table::Table;
 
 pub struct Root {
     platform: RefCell<Box<SDLPlatform>>,
