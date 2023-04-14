@@ -1,62 +1,12 @@
-use std::{pin::Pin};
+use std::pin::Pin;
 
 pub use std::{future::Future, task::{Poll, Context}};
 
 use debug_cell::RefCell;
 
-struct Task {
-    char: char,
-    time: u32
-}
-
-impl Task {
-    fn new(char: char) -> Task {
-        Task {
-            char,
-            time: 0
-        }
-    }
-}
-
-impl Future for Task {
-    type Output = u32;
-    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
-        println!("Task polled! {}", self.char);
-        if self.time >= 5 {
-            println!("Ready task: {}, time: {}", self.char, self.time);
-            Poll::Ready(self.time)
-        } else {
-            println!("Updating task: {}, time: {}", self.char, self.time);
-            self.get_mut().time += 1;
-            Poll::Pending
-        }
-    }
-}
-
 use crate::Table;
 
-async fn tu(c1: char) {
-    let t1 = Task::new(c1);
-    t1.await;
-}
-
-pub fn tst() {
-    let executor = Executor::new();
-
-    let t1 = tu('c');
-    let t2 = tu('d');
-
-    executor.add_task(t1);
-    executor.add_task(t2);
-
-    loop {
-        if executor.execute() {
-            break
-        }
-    }
-}
-
-struct Executor {
+pub struct Executor {
     tasks: Table<Box<RefCell<dyn Future<Output = ()>>>>,
 }
 
@@ -72,7 +22,7 @@ impl Executor {
     }
 
     fn execute(&self) -> bool {
-        let count = self.tasks.filter(Box::new(|task: &Box<RefCell<dyn Future<Output = ()>>>| -> bool {
+        let count = self.tasks.filter(&|task: &Box<RefCell<dyn Future<Output = ()>>>| -> bool {
             let mut pinned = unsafe {
                 Pin::new_unchecked( task.borrow_mut())
             };
@@ -88,76 +38,224 @@ impl Executor {
                     true
                  },
             }
-        }));
+        });
 
         println!("{count}");
         return count == 0;
     }
 }
 
-// block one single task
-fn block<F: Future>(future: &mut F) -> F::Output {
-    let fake_cx: u64 = 0;
-    let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+impl Executor {
+    // block one single task
+    fn block<F: Future>(mut future: F) -> F::Output {
+        let fake_cx: u64 = 0;
+        let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
 
-    // SAFETY: we shadow `future` so it can't be accessed again.
-    let mut future = unsafe { Pin::new_unchecked(future) };
+        // SAFETY: we shadow `future` so it can't be accessed again.
+        let mut future = unsafe { Pin::new_unchecked(&mut future) };
 
-    loop {
-        match Future::poll(future.as_mut(), &mut fake_cx) {
-            Poll::Ready(val) => {
-                return  val;
-            },
-            Poll::Pending => { },
+        loop {
+            match Future::poll(future.as_mut(), &mut fake_cx) {
+                Poll::Ready(val) => {
+                    return  val;
+                },
+                Poll::Pending => { },
+            };
+        }
+    }
+
+    // block a vector of tasks
+    fn block_all<F: Future>(mut futures: Vec<F>) -> Vec<F::Output> {
+        let fake_cx: u64 = 0;
+        let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+
+        struct FutureHolder<'a, F: Future> {
+            future: Pin<&'a mut F>,
+            done: bool,
+            output: Option<F::Output>,
+        }
+
+        // SAFETY: we shadow `future` so it can't be accessed again.
+        let mut futures: Vec<FutureHolder<F>> = futures.iter_mut().map(|f: &mut F| 
+            FutureHolder {
+                future: unsafe { Pin::new_unchecked( f) },
+                done: false,
+                output: None
+            }
+        ).collect();
+
+        loop {
+            let done = &mut true;
+
+            futures.iter_mut().for_each(|future| {
+                if !future.done {
+                    match Future::poll(future.future.as_mut(), &mut fake_cx) {
+                        Poll::Ready(val) => {
+                            future.done = true;
+                            future.output = Some(val);
+                        },
+                        Poll::Pending => { },
+                    };
+                }
+
+                if !future.done {
+                    *done = false
+                }
+            });
+
+            if *done {
+                break 
+            }
         };
+
+        // return only the outputs, in same order as recived order
+        futures.into_iter().map(|t| t.output.expect("Promis must be completed")).collect()
     }
 }
 
-// block a vector of tasks
-fn block_all<F: Future>(futures: Vec<&mut F>) -> Vec<F::Output> {
-    let fake_cx: u64 = 0;
-    let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
 
-    struct FutureHolder<'a, F: Future> {
-        future: Pin<&'a mut F>,
-        done: bool,
-        output: Option<F::Output>,
+    use super::*;
+
+    struct Task {
+        id: char,
+        count: i32,
+        report: Rc<RefCell<Vec<char>>>
+    }
+    
+    impl Task {
+        async fn new_value(id: char, count: i32, report: Rc<RefCell<Vec<char>>>) -> char {
+            let task = Task {
+                id,
+                count,
+                report,
+            };
+
+            task.await
+        }
+
+        async fn new_global(id: char, count: i32, report: Rc<RefCell<Vec<char>>>) {
+            let task = Task {
+                id,
+                count,
+                report,
+            };
+
+            task.await;
+        }
+    }
+    
+    impl Future for Task {
+        type Output = char;
+        fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
+            if self.count <= 0 {
+                Poll::Ready(self.id)
+            } else {
+                self.report.borrow_mut().push(self.id);
+                self.get_mut().count -= 1;
+                Poll::Pending
+            }
+        }
     }
 
-    // SAFETY: we shadow `future` so it can't be accessed again.
-    let mut futures: Vec<FutureHolder<F>> = futures.into_iter().map(|f| 
-        FutureHolder {
-            future: unsafe { Pin::new_unchecked(f) },
-            done: false,
-            output: None
-        }
-    ).collect();
+    #[test]
+    fn block() {
+        let report = Rc::new(RefCell::new(vec![]));
+    
+        let a = Task::new_value('a', 2, Rc::clone(&report));
+    
+        let value = Executor::block(a);
 
-    loop {
-        let done = &mut true;
+        assert_eq!(value, 'a');
+        assert_eq!(*report.borrow(), vec!['a', 'a']);
+    }
 
-        futures.iter_mut().for_each(|future| {
-            if !future.done {
-                match Future::poll(future.future.as_mut(), &mut fake_cx) {
-                    Poll::Ready(val) => {
-                        future.done = true;
-                        future.output = Some(val);
-                    },
-                    Poll::Pending => { },
-                };
+    #[test]
+    fn block_all_a() {
+        let report = Rc::new(RefCell::new(vec![]));
+    
+        let a = Task::new_value('a', 3, Rc::clone(&report));
+        let b = Task::new_value('b', 2, Rc::clone(&report));
+    
+        let value = Executor::block_all(vec![a, b]);
+
+        assert_eq!(value, vec!['a', 'b']);
+        assert_eq!(*report.borrow(), vec!['a', 'b', 'a', 'b', 'a']);
+    }
+
+    #[test]
+    fn block_all_b() {
+        let report = Rc::new(RefCell::new(vec![]));
+    
+        let a = Task::new_value('a', 2, Rc::clone(&report));
+        let b = Task::new_value('b', 3, Rc::clone(&report));
+    
+        let value = Executor::block_all(vec![a, b]);
+
+        assert_eq!(value, vec!['a', 'b']);
+        assert_eq!(*report.borrow(), vec!['a', 'b', 'a', 'b', 'b']);
+    }
+    
+    #[test]
+    fn simple_executor() {
+        let executor = Executor::new();
+        let report = Rc::new(RefCell::new(vec![]));
+    
+        let a = Task::new_global('a', 2, Rc::clone(&report));
+    
+        executor.add_task(a);
+    
+        loop {
+            if executor.execute() {
+                break
             }
+        };
 
-            if !future.done {
-                *done = false
+        assert_eq!(*report.borrow(), vec!['a', 'a']);
+    }
+
+    #[test]
+    fn executor() {
+        let executor = Executor::new();
+        let report = Rc::new(RefCell::new(vec![]));
+    
+        let a = Task::new_global('a', 3, Rc::clone(&report));
+        let b = Task::new_global('b', 2, Rc::clone(&report));
+    
+        executor.add_task(a);
+        executor.add_task(b);
+    
+        loop {
+            if executor.execute() {
+                break
             }
-        });
+        };
 
-        if *done {
-            break 
-        }
-    };
+        assert_eq!(*report.borrow(), vec!['a', 'b', 'a', 'b', 'a']);
+    }
 
-    // return only the outputs, in same order as recived order
-    futures.into_iter().map(|t| t.output.expect("Promis must be completed")).collect()
+    #[test]
+    fn executor_mixed() {
+        let executor = Executor::new();
+        let report = Rc::new(RefCell::new(vec![]));
+    
+        let a = Task::new_global('a', 4, Rc::clone(&report));
+        let b = Task::new_global('b', 2, Rc::clone(&report));
+        let c = Task::new_global('c', 2, Rc::clone(&report));
+    
+        executor.add_task(a);
+        executor.add_task(b);
+    
+        executor.execute();
+        executor.add_task(c);
+
+        executor.execute();
+        executor.execute();
+        executor.execute();
+
+
+        assert_eq!(*report.borrow(), vec!['a', 'b', 'a', 'b', 'c', 'a', 'c', 'a']);
+    }
 }
-

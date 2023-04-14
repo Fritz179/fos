@@ -42,7 +42,7 @@ impl Root {
         let (shell, shell_pid) = self.proc.spawn::<Shell>();
 
         // pipe stdin to shell stdin
-        let self_clone = Rc::clone(&self);
+        let self_clone = Rc::clone(self);
         self.proc.read(
             STDIN,
             Box::new(move |char| {
@@ -52,7 +52,7 @@ impl Root {
         );
 
         // pipe shell stdout to terminal
-        let self_clone = Rc::clone(&self);
+        let self_clone = Rc::clone(self);
         let fs = self_clone.proc.fs.upgrade().expect("No Fs");
         fs.read(
             shell_pid,
@@ -107,8 +107,6 @@ impl fmt::Debug for Root {
 pub mod future;
 
 fn main() {
-    future::tst();
-
     let fs = Rc::new(Fs::new());
     let spawner = Rc::new(Spawner::new(Rc::clone(&fs)));
 

@@ -56,17 +56,15 @@ impl<T> Table<T> {
         let items = self.items.borrow();
         let item = items.get(index);
 
-        if let Some(item) = item {
-            if let Some(item) = item {
-                callback(item);
-                return true;
-            }
+        if let Some(Some(item)) = item {
+            callback(item);
+            return true;
         }
 
         return false;
     }
 
-    pub fn filter(&self, callback: Box<dyn Fn(&T) -> bool>) -> usize {
+    pub fn filter(&self, callback: &dyn Fn(&T) -> bool) -> usize {
         let mut items = self.items.borrow_mut();
 
         for i in 0..items.len() {
@@ -149,9 +147,9 @@ mod tests {
         table.add(6);
         table.add(7);
 
-        let size = table.filter(Box::new(|element: &i32| -> bool {
+        let size = table.filter(&|element: &i32| -> bool {
             *element != 6
-        }));
+        });
 
         assert_eq!(size, 2);
         assert_eq!(table.len(), 2);
