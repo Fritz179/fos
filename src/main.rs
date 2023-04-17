@@ -1,7 +1,6 @@
-use std::{cell::RefCell, fmt, rc::Rc, borrow::Borrow};
+use std::{cell::RefCell, fmt, rc::Rc};
 
 mod platforms;
-use debug_cell::Ref;
 use platforms::{Event, SDLPlatform, Tekenen};
 
 mod proc;
@@ -18,6 +17,10 @@ use shell::Shell;
 
 mod table;
 pub use table::Table;
+
+use crate::future::Executor;
+
+mod channel;
 
 pub struct Root {
     platform: RefCell<Box<SDLPlatform>>,
@@ -40,27 +43,40 @@ impl Process for Root {
 impl Root {
     fn main(self: &Rc<Self>) {
         let (shell, shell_pid) = self.proc.spawn::<Shell>();
+        let spawner = self.proc.spawner.upgrade().unwrap();
 
         // pipe stdin to shell stdin
         let self_clone = Rc::clone(self);
-        self.proc.read(
-            STDIN,
-            Box::new(move |char| {
-                let fs = self_clone.proc.fs.upgrade().expect("No Fs");
-                fs.write(shell_pid, 0, char);
-            }),
-        );
+        // self.proc.read(
+        //     STDIN,
+        //     Box::new(move |char| {
+        //         let fs = self_clone.proc.fs.upgrade().expect("No Fs");
+        //         fs.write(shell_pid, 0, char);
+        //     }),
+        // );
+        let self_clone = Rc::clone(self);
+
+        let shell_clone = Rc::clone(&shell);
+        spawner.executor.add_task(async move {
+            loop {
+                let char = self_clone.proc.read(STDIN).await;
+                shell_clone.proc.write(STDIN, char.expect("Option sening to shell"));
+            }
+        });
 
         // pipe shell stdout to terminal
         let self_clone = Rc::clone(self);
         let fs = self_clone.proc.fs.upgrade().expect("No Fs");
-        fs.read(
-            shell_pid,
-            STDOUT,
-            Box::new(move |char| {
-                self_clone.terminal.write(char);
-            }),
-        );
+        
+
+        let shell_clone = Rc::clone(&shell);
+        spawner.executor.add_task(async move {
+            loop {
+                let char = shell_clone.proc.read(STDOUT).await;
+
+                self_clone.terminal.write(char.expect("Option sening to terminal"));
+            }
+        });
 
         shell.main();
     }
@@ -76,9 +92,9 @@ impl Root {
                 }
                 Event::KeyDown { char, keycode, .. } => {
                     if let Some(c) = char {
-                        self.proc.write(0, c)
+                        self.proc.write(STDIN, c);
                     } else {
-                        println!("{}", keycode)
+                        println!("a {}", keycode)
                     }
                 } // _ => {
                   //     println!("Unhandled event: {:?}", event);
@@ -108,7 +124,9 @@ pub mod future;
 
 fn main() {
     let fs = Rc::new(Fs::new());
-    let spawner = Rc::new(Spawner::new(Rc::clone(&fs)));
+    let executor = Rc::new(Executor::new());
+
+    let spawner = Rc::new(Spawner::new(fs, Rc::clone(&executor)));
 
     let (root, _pid) = spawner.spawn::<Root>();
     root.main();
@@ -116,6 +134,7 @@ fn main() {
     println!("{:?}", spawner);
 
     SDLPlatform::set_interval(Box::new(move || {
+        executor.execute();
         return root.update();
     }), 60);
 }

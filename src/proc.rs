@@ -3,7 +3,9 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{FileDescriptor, Fs};
+use debug_cell::Ref;
+
+use crate::{FileDescriptor, Fs, Table, future::Executor};
 
 pub type Pid = u32;
 
@@ -13,11 +15,16 @@ pub trait Process {
         Self: Sized;
 }
 
+use crate::channel::{Tx, Rx, new_channel};
+
+type Fd = (Rc<Tx<char>>, Option<Rx<char>>);
+
 pub struct Proc {
     pub fs: Weak<Fs>,
     pid: Pid,
     children: RefCell<Vec<Rc<dyn Process>>>,
-    spawner: Weak<Spawner>,
+    pub spawner: Weak<Spawner>,
+    descriptor_table: Table<Fd>
     // descriptorMap
 }
 
@@ -28,6 +35,7 @@ impl Proc {
             fs,
             spawner,
             children: RefCell::new(vec![]),
+            descriptor_table: Table::new()
         }
     }
 
@@ -43,42 +51,58 @@ impl Proc {
     }
 
     pub fn open(&self) -> FileDescriptor {
-        let fs = self.fs.upgrade().expect("No FS found");
+        let (tx, rx) = new_channel();
+        let channel = (tx, Some(rx));
 
-        return fs.open(self.pid);
+        let id = self.descriptor_table.add(channel);
+
+        return id as FileDescriptor;
     }
 
-    pub fn read(&self, descriptor: FileDescriptor, callback: Box<dyn Fn(char)>) {
-        let fs = self.fs.upgrade().expect("No FS found");
+    pub async fn read(&self, descriptor: FileDescriptor) -> Option<char> {
+        let fd = self.descriptor_table.get(descriptor);
 
-        fs.read(self.pid, descriptor, callback);
+        let rx = std::cell::Ref::map(fd, |f| &f.1);
+
+        if let Some(ref rx) = *rx {
+            println!("Reading: {descriptor}");
+
+            return rx.read().await
+        } else {
+            None
+        }
     }
 
-    pub fn write(&self, descriptor: FileDescriptor, char: char) {
-        let fs = self.fs.upgrade().expect("No FS found");
+    pub fn write(&self, descriptor: FileDescriptor, char: char) -> Option<()> {
+        let fd = self.descriptor_table.get(descriptor);
 
-        fs.write(self.pid, descriptor, char);
+        println!("Writng: {descriptor}, {char}");
+
+        let tx = std::cell::Ref::map(fd, |f| &f.0);
+        tx.send(char)
     }
 }
 
 #[derive(Debug)]
 pub struct Spawner {
-    processes: RefCell<Vec<Weak<dyn Process>>>,
+    processes: Table<Weak<dyn Process>>,
     fs: Rc<Fs>,
+    pub executor: Rc<Executor>,
 }
 
 impl Spawner {
-    pub fn new(fs: Rc<Fs>) -> Self {
+    pub fn new(fs: Rc<Fs>, executor: Rc<Executor>) -> Self {
         Spawner {
-            processes: RefCell::new(vec![]),
+            processes: Table::new(),
             fs,
+            executor
         }
     }
 
     pub fn spawn<Child: Process + 'static>(self: &Rc<Self>) -> (Rc<Child>, Pid) {
-        let mut processes = self.processes.borrow_mut();
+        let processes = &self.processes;
 
-        let child_pid = processes.len() as Pid;
+        let child_pid = processes.next_free() as Pid;
         let child_proc = Proc::new(child_pid, Rc::downgrade(&self.fs), Rc::downgrade(self));
 
         self.fs.add_pid(child_pid);
@@ -88,7 +112,9 @@ impl Spawner {
         child_proc.open(); // stderr
 
         let child = Rc::new(Child::new(child_proc));
-        processes.push(Rc::downgrade(&child) as Weak<dyn Process>);
+        let id = processes.add(Rc::downgrade(&child) as Weak<dyn Process>);
+
+        assert_eq!(child_pid, id as u32);
 
         drop(processes);
 

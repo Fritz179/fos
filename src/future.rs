@@ -8,20 +8,30 @@ use crate::Table;
 
 pub struct Executor {
     tasks: Table<Box<RefCell<dyn Future<Output = ()>>>>,
+    queue: RefCell<Vec<Box<RefCell<dyn Future<Output = ()>>>>>,
 }
 
 impl Executor {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Executor {
             tasks: Table::new(),
+            queue: RefCell::new(vec![]),
         }
     }
 
-    fn add_task<F: Future<Output = ()> + 'static>(&self, task: F) {
-        self.tasks.add(Box::new(RefCell::new(task)));
+    pub fn add_task<F: Future<Output = ()> + 'static>(&self, task: F) {
+        self.queue.borrow_mut().push(Box::new(RefCell::new(task)));
     }
 
-    fn execute(&self) -> bool {
+    pub fn execute(&self) -> bool {
+        let mut queue = self.queue.borrow_mut();
+
+        while queue.len() != 0 {
+            self.tasks.add(queue.pop().unwrap());
+        };
+
+        drop(queue);
+
         let count = self.tasks.filter(&|task: &Box<RefCell<dyn Future<Output = ()>>>| -> bool {
             let mut pinned = unsafe {
                 Pin::new_unchecked( task.borrow_mut())
@@ -45,9 +55,18 @@ impl Executor {
     }
 }
 
+impl std::fmt::Debug for Executor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Executor")
+            //  .field("x", &self.x)
+            //  .field("y", &self.y)
+            .finish()
+    }
+}
+
 impl Executor {
     // block one single task
-    fn block<F: Future>(mut future: F) -> F::Output {
+    pub fn block<F: Future>(mut future: F) -> F::Output {
         let fake_cx: u64 = 0;
         let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
 
@@ -65,7 +84,7 @@ impl Executor {
     }
 
     // block a vector of tasks
-    fn block_all<F: Future>(mut futures: Vec<F>) -> Vec<F::Output> {
+    pub fn block_all<F: Future>(mut futures: Vec<F>) -> Vec<F::Output> {
         let fake_cx: u64 = 0;
         let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
 
