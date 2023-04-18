@@ -1,7 +1,9 @@
 use std::{cell::RefCell, fmt, rc::Rc};
 
 mod platforms;
-use platforms::{Event, SDLPlatform, Tekenen};
+use platforms::{Event, SDLPlatform, tekenen::Tekenen};
+
+pub mod fc;
 
 mod proc;
 use proc::*;
@@ -15,16 +17,10 @@ use terminal::Terminal;
 mod shell;
 use shell::Shell;
 
-mod table;
-pub use table::Table;
-
-use crate::future::Executor;
-
-mod channel;
+use fc::future::Executor;
 
 pub struct Root {
     platform: RefCell<Box<SDLPlatform>>,
-    tekenen: Tekenen,
     terminal: Terminal,
     proc: Proc,
 }
@@ -33,7 +29,6 @@ impl Process for Root {
     fn new(proc: Proc) -> Root {
         Root {
             platform: RefCell::new(platforms::SDLPlatform::new(800, 600)),
-            tekenen: Tekenen::new(800, 600),
             terminal: Terminal::new(),
             proc,
         }
@@ -42,18 +37,10 @@ impl Process for Root {
 
 impl Root {
     fn main(self: &Rc<Self>) {
-        let (shell, shell_pid) = self.proc.spawn::<Shell>();
+        let (shell, _) = self.proc.spawn::<Shell>();
         let spawner = self.proc.spawner.upgrade().unwrap();
 
         // pipe stdin to shell stdin
-        let self_clone = Rc::clone(self);
-        // self.proc.read(
-        //     STDIN,
-        //     Box::new(move |char| {
-        //         let fs = self_clone.proc.fs.upgrade().expect("No Fs");
-        //         fs.write(shell_pid, 0, char);
-        //     }),
-        // );
         let self_clone = Rc::clone(self);
 
         let shell_clone = Rc::clone(&shell);
@@ -66,8 +53,6 @@ impl Root {
 
         // pipe shell stdout to terminal
         let self_clone = Rc::clone(self);
-        let fs = self_clone.proc.fs.upgrade().expect("No Fs");
-        
 
         let shell_clone = Rc::clone(&shell);
         spawner.executor.add_task(async move {
@@ -81,7 +66,7 @@ impl Root {
         shell.main();
     }
 
-    fn update(&self) -> bool {
+    fn update(&self, tekenen: &mut Tekenen) -> bool {
         let mut platform = self.platform.borrow_mut();
 
         while let Some(event) = platform.read_events() {
@@ -102,9 +87,9 @@ impl Root {
             }
         }
 
-        self.terminal.render(&self.tekenen, 0);
+        self.terminal.render(tekenen, 0);
 
-        platform.display_pixels(&self.tekenen);
+        platform.display_pixels(tekenen.get_pixels());
 
         // should not stop
         return false;
@@ -120,7 +105,7 @@ impl fmt::Debug for Root {
     }
 }
 
-pub mod future;
+// thread_local!(static executor: Executor = Executor::new());
 
 fn main() {
     let fs = Rc::new(Fs::new());
@@ -133,8 +118,10 @@ fn main() {
 
     println!("{:?}", spawner);
 
-    SDLPlatform::set_interval(Box::new(move || {
+    let mut tekenen = Tekenen::new(800, 600);
+
+    SDLPlatform::set_interval(&mut move || {
         executor.execute();
-        return root.update();
-    }), 60);
+        return root.update(&mut tekenen);
+    }, 60);
 }

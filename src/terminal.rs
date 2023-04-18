@@ -18,7 +18,7 @@ impl Terminal {
 }
 
 impl Terminal {
-    pub fn render(&self, renderer: &Tekenen, time: u64) {
+    pub fn render(&self, renderer: &mut Tekenen, time: u64) {
         renderer.draw_terminal(&self.buffer.borrow(), time);
     }
 }

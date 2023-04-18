@@ -3,9 +3,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use debug_cell::Ref;
-
-use crate::{FileDescriptor, Fs, Table, future::Executor};
+use crate::{FileDescriptor, Fs, fc::table::Table, fc::future::Executor};
 
 pub type Pid = u32;
 
@@ -15,7 +13,7 @@ pub trait Process {
         Self: Sized;
 }
 
-use crate::channel::{Tx, Rx, new_channel};
+use crate::fc::channel::{Tx, Rx, new_channel};
 
 type Fd = (Rc<Tx<char>>, Option<Rx<char>>);
 
@@ -80,6 +78,10 @@ impl Proc {
 
         let tx = std::cell::Ref::map(fd, |f| &f.0);
         tx.send(char)
+    }
+
+    pub fn exit(&self) {
+        // Exit?
     }
 }
 

@@ -2,9 +2,9 @@ use std::pin::Pin;
 
 pub use std::{future::Future, task::{Poll, Context}};
 
-use debug_cell::RefCell;
+use std::cell::RefCell;
 
-use crate::Table;
+use crate::fc::table::Table;
 
 pub struct Executor {
     tasks: Table<Box<RefCell<dyn Future<Output = ()>>>>,
@@ -12,7 +12,7 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Executor {
             tasks: Table::new(),
             queue: RefCell::new(vec![]),

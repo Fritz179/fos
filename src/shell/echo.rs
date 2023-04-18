@@ -25,5 +25,7 @@ impl EchoProgram {
         }
 
         self.proc.write(STDOUT, '\n');
+
+        self.proc.exit();
     }
 }

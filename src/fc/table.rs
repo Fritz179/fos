@@ -7,7 +7,7 @@ pub struct Table<T> {
 }
 
 impl<T> Table<T> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Table {
             items: RefCell::new(vec![]),
             count: Cell::new(0),

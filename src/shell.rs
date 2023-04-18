@@ -102,12 +102,5 @@ impl Shell {
                 }
             }
         })
-
-        // self.proc.read(
-        //     STDIN,
-        //     Box::new(move |char| {
-
-        //     }),
-        // )
     }
 }

@@ -1,4 +1,4 @@
-use crate::future::{Future, Poll, Context};
+use super::future::{Future, Poll, Context};
 use std::{pin::Pin, rc::Rc, collections::VecDeque, cell::RefCell};
 
 struct Shared<T> {
@@ -103,7 +103,7 @@ pub fn new_channel<T>() -> (Rc<Tx<T>>, Rx<T>) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::future::Executor;
+    use super::super::future::Executor;
 
     #[test]
     fn transmit_sequntial() {
