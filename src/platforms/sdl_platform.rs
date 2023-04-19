@@ -1,4 +1,3 @@
-use sdl2::keyboard::Keycode;
 use std::time::Duration;
 
 use sdl2::rect::Rect;
@@ -7,7 +6,7 @@ use sdl2::video::Window;
 use sdl2::EventPump;
 use std::time::SystemTime;
 
-use super::tekenen::Pixels;
+use super::{tekenen::Pixels, Event, Keycode, Keymod, Platform};
 
 pub struct SDLPlatform {
     canvas: Canvas<Window>,
@@ -16,26 +15,8 @@ pub struct SDLPlatform {
     active: bool,
 }
 
-#[derive(Debug)]
-pub struct Keymod {
-    shift: bool,
-    ctrl: bool,
-    caps: bool,
-}
-
-#[derive(Debug)]
-pub enum Event {
-    KeyDown {
-        repeat: bool,
-        char: Option<char>,
-        keycode: Keycode,
-        keymod: Keymod,
-    },
-    Quit,
-}
-
-impl SDLPlatform {
-    pub fn new(width: u32, height: u32) -> Box<SDLPlatform> {
+impl Platform for SDLPlatform {
+    fn new(width: u32, height: u32) -> Box<SDLPlatform> {
         let sdl_context = sdl2::init().expect("Cannot init sdl2!");
         let video_subsystem = sdl_context.video().expect("Cannot init video");
 
@@ -58,7 +39,7 @@ impl SDLPlatform {
         return Box::new(io_manger);
     }
 
-    pub fn display_pixels(&mut self, pixels: &Pixels) {
+    fn display_pixels(&mut self, pixels: &Pixels) {
 
         let (width, height) = self.canvas.output_size().expect("Cannot get canvas size");
 
@@ -93,7 +74,7 @@ impl SDLPlatform {
         self.canvas.present();
     }
 
-    pub fn read_events(&mut self) -> Option<Event> {
+    fn read_events(&mut self) -> Option<Event> {
         for event in self.event_pump.poll_iter() {
             match event {
                 sdl2::event::Event::Quit { .. } => {
@@ -151,7 +132,7 @@ impl SDLPlatform {
         return None;
     }
 
-    pub fn set_interval(callback: &mut dyn FnMut() -> bool, fps: u32) {
+    fn set_interval(callback: &mut dyn FnMut() -> bool, fps: u32) {
         // let now = std::time::SystemTime::now();
 
         'running: loop {

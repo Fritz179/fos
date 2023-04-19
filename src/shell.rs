@@ -1,12 +1,15 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    proc::{Proc, Process},
+    root::{Proc, Process},
     STDIN, STDOUT,
 };
 
 mod echo;
 use echo::EchoProgram;
+
+mod top;
+use top::TopProgram;
 
 pub struct Shell {
     pub proc: Proc,
@@ -34,13 +37,11 @@ impl Shell {
             self_clone.proc.write(STDOUT, char);
         }
 
-        let spawner = self.proc.spawner.upgrade().unwrap();
-        spawner.executor.add_task(async move {
+        self.proc.root.executor.add_task(async move {
             loop {
                 let char = self_clone.proc.read(STDIN).await.unwrap();
 
                 let mut buffer = self_clone.buffer.borrow_mut();
-                let spawner = self_clone.proc.spawner.upgrade().unwrap();
 
                 if char == '\n' {
                     self_clone.proc.write(STDOUT, char);
@@ -60,7 +61,7 @@ impl Shell {
 
                         match command {
                             "echo" => {
-                                let (echo, echo_id) = self_clone.proc.spawn::<EchoProgram>();
+                                let (echo, _) = self_clone.proc.spawn::<EchoProgram>();
 
                                 // pipe shell stdin to echo stdin
                                 // let self_clone_clone = Rc::clone(&self_clone);
@@ -73,7 +74,7 @@ impl Shell {
                                 // pipe shell stdout to terminal
                                 let self_clone_clone = Rc::clone(&self_clone);
                                 let echo_clone = Rc::clone(&echo);
-                                spawner.executor.add_task(async move {
+                                self_clone.proc.root.executor.add_task(async move {
                                     loop {
                                         let char = echo_clone.proc.read(STDOUT).await.unwrap();
                                         self_clone_clone.proc.write(STDOUT, char);
@@ -81,7 +82,30 @@ impl Shell {
                                 });
 
                                 echo.main(strings);
-                            }
+                            },
+                            "top" => {
+                                let (top, _) = self_clone.proc.spawn::<TopProgram>();
+
+                                // pipe shell stdin to echo stdin
+                                // let self_clone_clone = Rc::clone(&self_clone);
+                                // spawner.executor.add_task(async move {
+                                //     loop {
+                                //         self_clone_clone.proc.read(descriptor)
+                                //     }
+                                // });
+
+                                // pipe shell stdout to terminal
+                                let self_clone_clone = Rc::clone(&self_clone);
+                                let echo_clone = Rc::clone(&top);
+                                self_clone.proc.root.executor.add_task(async move {
+                                    loop {
+                                        let char = echo_clone.proc.read(STDOUT).await.unwrap();
+                                        self_clone_clone.proc.write(STDOUT, char);
+                                    }
+                                });
+
+                                top.main();
+                            },
                             _ => {
                                 for char in "Invalid command!\n".chars() {
                                     self_clone.proc.write(STDOUT, char);

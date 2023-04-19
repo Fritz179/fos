@@ -1,5 +1,5 @@
 use crate::{
-    proc::{Proc, Process},
+    root::{Proc, Process},
     STDOUT,
 };
 
