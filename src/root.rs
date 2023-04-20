@@ -39,6 +39,14 @@ impl Process for Root {
             spawner: Rc::new(Spawner::new()),
         }
     }
+
+    fn get_process_name(&self) -> &str {
+        "Root"
+    }
+
+    fn get_proc(&self) -> &Proc {
+        &self.proc
+    }
 }
 
 impl Root {

@@ -14,6 +14,14 @@ impl Process for EchoProgram {
     {
         EchoProgram { proc }
     }
+
+    fn get_process_name(&self) -> &str {
+        "Echo"
+    }
+
+    fn get_proc(&self) -> &Proc {
+        &self.proc
+    }
 }
 
 impl EchoProgram {

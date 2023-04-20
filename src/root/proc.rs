@@ -6,7 +6,7 @@
 
 use std::{
     cell::RefCell,
-    rc::{Rc, Weak},
+    rc::Rc,
 };
 
 use crate::{FileDescriptor, fc::table::Table, Root};
@@ -17,6 +17,10 @@ pub trait Process {
     fn new(proc: Proc) -> Self
     where
         Self: Sized;
+    
+    fn get_process_name(&self) -> &str;
+
+    fn get_proc(&self) -> &Proc;
 }
 
 use crate::fc::channel::{Tx, Rx, new_channel};
@@ -24,10 +28,10 @@ use crate::fc::channel::{Tx, Rx, new_channel};
 type Fd = (Rc<Tx<char>>, Option<Rx<char>>);
 
 pub struct Proc {
-    pid: Pid,
+    pub pid: Pid,
     pub root: Rc<Root>,
     pub children: RefCell<Vec<Rc<dyn Process>>>,
-    descriptor_table: Table<Fd>
+    pub descriptor_table: Table<Fd>
 }
 
 impl std::fmt::Debug for Proc {
