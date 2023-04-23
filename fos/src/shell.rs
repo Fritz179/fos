@@ -61,7 +61,7 @@ impl Shell {
                         strings.push(string);
                     }
 
-                    println!("{}", strings.len());
+                    // println!("{}", strings.len());
 
                     if strings.len() > 0 {
                         let command = strings.remove(0);

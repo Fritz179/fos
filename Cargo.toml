@@ -3,6 +3,7 @@
 members = [
     "fos",
     "sdl2",
+    "shell",
     "wasm",
     "server",
 ]

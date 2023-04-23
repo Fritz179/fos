@@ -67,7 +67,7 @@ impl Proc {
         let rx = std::cell::Ref::map(fd, |f| &f.1);
 
         if let Some(ref rx) = *rx {
-            println!("Reading: {descriptor}");
+            // println!("Reading: {descriptor}");
 
             return rx.read().await
         } else {
@@ -78,7 +78,7 @@ impl Proc {
     pub fn write(&self, descriptor: FileDescriptor, char: char) -> Option<()> {
         let fd = self.descriptor_table.get(descriptor);
 
-        println!("Writng: {descriptor}, {char}");
+        // println!("Writng: {descriptor}, {char}");
 
         let tx = std::cell::Ref::map(fd, |f| &f.0);
         tx.send(char)
