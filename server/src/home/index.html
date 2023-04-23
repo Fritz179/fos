@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8" />
+        <title>FOS on WASM</title>
+    </head>
+    <body>
+        <script type="module">
+        import init, { start } from "./wasm/wasm.js";
+        
+        window.read_wasm = () => "WASSSSSSM"
+
+        window.write_wasm = msg => console.log(msg)
+
+        init().then(() => {
+            start();
+        });
+        </script>
+    </body>
+</html>

@@ -1,13 +1,14 @@
 pub mod font;
 pub mod tekenen;
+pub use tekenen::Tekenen;
 
-use sdl2::keyboard::Keycode;
+pub use sdl2::keyboard::Keycode;
 
 #[derive(Debug)]
 pub struct Keymod {
-    shift: bool,
-    ctrl: bool,
-    caps: bool,
+    pub shift: bool,
+    pub ctrl: bool,
+    pub caps: bool,
 }
 
 #[derive(Debug)]
@@ -21,14 +22,9 @@ pub enum Event {
     Quit,
 }
 
-pub trait Platform {
-    fn new(width: u32, height: u32) -> Box<Self>;
+pub trait PlatformTrait {
+    fn new(width: u32, height: u32) -> Box<Self> where Self: Sized;
     fn display_pixels(&mut self, pixels: &tekenen::Pixels);
     fn read_events(&mut self) -> Option<Event>;
-    fn set_interval(callback: &mut dyn FnMut() -> bool, fps: u32);
+    fn set_interval(callback: &mut dyn FnMut() -> bool, fps: u32) where Self: Sized;
 }
-
-
-// sdl2
-mod sdl_platform;
-pub use self::sdl_platform::*;

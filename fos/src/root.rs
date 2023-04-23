@@ -12,10 +12,10 @@ pub use spawner::*;
 mod terminal;
 use terminal::Terminal;
 
-use crate::{platforms::{SDLPlatform, tekenen::Tekenen, Event, Platform}, shell::Shell, fc::future::Executor};
+use crate::{platforms::{tekenen::Tekenen, Event, PlatformTrait}, shell::Shell, fc::future::Executor};
 
 pub struct Root {
-    platform: RefCell<Box<SDLPlatform>>,
+    platform: RefCell<Box<dyn PlatformTrait>>,
     terminal: Terminal,
     proc: Proc,
     pub fs: Rc<Fs>,
@@ -25,7 +25,35 @@ pub struct Root {
 
 impl Process for Root {
     fn new(proc: Proc) -> Root {
-        let platform = RefCell::new(SDLPlatform::new(800, 600));
+        todo!();
+
+        // let platform = RefCell::new(Platform::new(800, 600));
+        // let terminal = Terminal::new();
+        // let fs = Fs::new();
+        // let executor = Executor::new();
+
+        // Root {
+        //     platform,
+        //     terminal,
+        //     proc,
+        //     fs: Rc::new(fs),
+        //     executor: Rc::new(executor),
+        //     spawner: Rc::new(Spawner::new()),
+        // }
+    }
+
+    fn get_process_name(&self) -> &str {
+        "Root"
+    }
+
+    fn get_proc(&self) -> &Proc {
+        &self.proc
+    }
+}
+
+impl Root {
+    pub fn new_2<Platform: PlatformTrait + 'static>(proc: Proc) -> Root {
+        let platform = RefCell::new(Platform::new(800, 600));
         let terminal = Terminal::new();
         let fs = Fs::new();
         let executor = Executor::new();
@@ -40,16 +68,6 @@ impl Process for Root {
         }
     }
 
-    fn get_process_name(&self) -> &str {
-        "Root"
-    }
-
-    fn get_proc(&self) -> &Proc {
-        &self.proc
-    }
-}
-
-impl Root {
     pub fn main(self: &Rc<Self>) {
         let (shell, _) = self.proc.spawn::<Shell>();
 

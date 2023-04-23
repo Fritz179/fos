@@ -1,6 +1,6 @@
 use std::rc::{Weak, Rc};
 
-use crate::{fc::table::Table, Process, Pid, Proc, Root};
+use crate::{fc::table::Table, Process, Pid, Proc, Root, PlatformTrait};
 
 #[derive(Debug)]
 pub struct Spawner {
@@ -35,7 +35,7 @@ impl Spawner {
         return (child, child_pid);
     }
 
-    pub fn spawn_root() -> Rc<Root> {
+    pub fn spawn_root<Platform: PlatformTrait + 'static>() -> Rc<Root> {
 
         let root = Rc::new_cyclic(|weak_root| {
             let weak_root_ptr = weak_root.as_ptr();
@@ -49,7 +49,7 @@ impl Spawner {
             let proc = Proc::new(0, root_ptr);
 
             // Making Rc<Root> valid
-            Root::new(proc)
+            Root::new_2::<Platform>(proc)
         });
         // Rc<Root is now valid>
 
