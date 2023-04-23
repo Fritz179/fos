@@ -5,16 +5,55 @@
         <title>FOS on WASM</title>
     </head>
     <body>
+
+        <style>
+            html {
+                background-color: #515151;
+            }
+        </style>
+
+        <canvas id="canvas"></canvas>
         <script type="module">
-        import init, { start } from "./wasm/wasm.js";
-        
-        window.read_wasm = () => "WASSSSSSM"
+            const canvas = document.querySelector('#canvas')
+            const ctx = canvas.getContext('2d')
 
-        window.write_wasm = msg => console.log(msg)
 
-        init().then(() => {
-            start();
-        });
+            import init, { wasm_start, wasm_run_callback, wasm_key_down } from "./wasm/fos_wasm.js";
+            
+            window.js_set_size = (width, height) => {
+                console.log(width, height)
+                canvas.width = width
+                canvas.height = height
+            }
+
+            window.js_display_pixels = pixels => {
+                const clamped = new Uint8ClampedArray(pixels)
+                const data = new ImageData(clamped, canvas.width)
+                ctx.putImageData(data, 0, 0)
+                // console.log(clamped)
+            }
+
+            window.js_set_interval = fps => {
+                window.setInterval(() => {
+                    wasm_run_callback()
+                }, 1000 / fps)
+            }
+
+            window.addEventListener('keydown', e => {
+                if (e.key.length == 1) {
+                    wasm_key_down(e.key)
+                    return
+                }
+
+                if (e.key == 'Enter') {
+                    wasm_key_down('\n')
+                    return
+                }
+            })
+
+            init().then(() => {
+                wasm_start();
+            });
         </script>
     </body>
 </html>

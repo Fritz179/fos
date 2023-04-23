@@ -9,6 +9,8 @@ pub const WHITE: Pixel = [255, 255, 255, 255];
 pub const RED: Pixel = [255, 0, 0, 255];
 #[allow(dead_code)]
 pub const GRAY: Pixel = [51, 51, 51, 255];
+#[allow(dead_code)]
+pub const BLACK: Pixel = [0, 0, 0, 255];
 
 
 pub struct Tekenen {
@@ -127,6 +129,8 @@ impl Tekenen {
     }
 
     pub fn draw_terminal(&mut self, buffer: &String, time: u64) {
+        self.background(BLACK);
+
         let (x, y) = self.draw_text(buffer, 0, 0);
 
         const BLINKING_TIME: u64 = 500;

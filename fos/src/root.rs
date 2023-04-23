@@ -15,7 +15,7 @@ use terminal::Terminal;
 use crate::{platforms::{tekenen::Tekenen, Event, PlatformTrait}, shell::Shell, fc::future::Executor};
 
 pub struct Root {
-    platform: RefCell<Box<dyn PlatformTrait>>,
+    pub platform: RefCell<Box<dyn PlatformTrait>>,
     terminal: Terminal,
     proc: Proc,
     pub fs: Rc<Fs>,
@@ -112,7 +112,7 @@ impl Root {
                     if let Some(c) = char {
                         self.proc.write(STDIN, c);
                     } else {
-                        println!("a {}", keycode)
+                        println!("unknown char {:?}", keycode)
                     }
                 } // _ => {
                   //     println!("Unhandled event: {:?}", event);

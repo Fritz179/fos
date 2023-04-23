@@ -8,6 +8,8 @@ use std::time::SystemTime;
 
 use fos::{tekenen::Pixels, Event, Keycode, Keymod, PlatformTrait};
 
+pub use sdl2::keyboard;
+
 pub struct SDLPlatform {
     canvas: Canvas<Window>,
     event_pump: EventPump,
@@ -107,14 +109,14 @@ impl PlatformTrait for SDLPlatform {
                             char = char::from_u32(charcode);
                         }
 
-                        if keycode == Keycode::Return {
+                        if keycode == keyboard::Keycode::Return {
                             char = Some('\n')
                         }
 
                         return Some(Event::KeyDown {
                             repeat,
                             char,
-                            keycode,
+                            keycode: Keycode::Temp,
                             keymod: Keymod {
                                 shift: shift_mod,
                                 ctrl: ctrl_mod,
@@ -132,7 +134,7 @@ impl PlatformTrait for SDLPlatform {
         return None;
     }
 
-    fn set_interval(callback: &mut dyn FnMut() -> bool, fps: u32) {
+    fn set_interval(mut callback: Box<dyn FnMut() -> bool>, fps: u32) {
         // let now = std::time::SystemTime::now();
 
         'running: loop {

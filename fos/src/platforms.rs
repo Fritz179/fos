@@ -2,7 +2,11 @@ pub mod font;
 pub mod tekenen;
 pub use tekenen::Tekenen;
 
-pub use sdl2::keyboard::Keycode;
+// pub use sdl2::keyboard::Keycode;
+#[derive(Debug)]
+pub enum Keycode {
+    Temp
+}
 
 #[derive(Debug)]
 pub struct Keymod {
@@ -26,5 +30,5 @@ pub trait PlatformTrait {
     fn new(width: u32, height: u32) -> Box<Self> where Self: Sized;
     fn display_pixels(&mut self, pixels: &tekenen::Pixels);
     fn read_events(&mut self) -> Option<Event>;
-    fn set_interval(callback: &mut dyn FnMut() -> bool, fps: u32) where Self: Sized;
+    fn set_interval(callback: Box<dyn FnMut() -> bool>, fps: u32) where Self: Sized;
 }

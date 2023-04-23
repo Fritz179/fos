@@ -1,5 +1,7 @@
 extern crate rouille;
 
+use std::process::Command;
+
 use rouille::Response;
 
 fn main() {
@@ -8,7 +10,14 @@ fn main() {
 
     // println!("{dir}");
 
-    println!("Now listening on localhost:8000");
+    Command::new("wasm-pack")
+    // .args(["build", "../../wasm", "--target", "web"])
+        .args(["build", "./wasm", "--target", "web", "--out-dir", "../server/src/home/wasm"])
+        // .args(["build", "../wasm", "--target", "web", "--out-dir", ])
+        .status()
+        .expect("failed to build wasm");
+
+    println!("Visit `http://localhost:8000/index.html`");
 
     rouille::start_server("localhost:8000", move |request| {
         let response = rouille::match_assets(request, "./server/src/home");

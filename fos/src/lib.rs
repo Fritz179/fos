@@ -13,7 +13,7 @@ pub fn main<Platform: PlatformTrait + 'static>() {
 
     let mut tekenen = Tekenen::new(800, 600);
 
-    Platform::set_interval(&mut move || {
+    Platform::set_interval(Box::new(move || {
         return root.update(&mut tekenen);
-    }, 60);
+    }), 60);
 }
