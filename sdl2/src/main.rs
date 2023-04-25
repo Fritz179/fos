@@ -89,6 +89,8 @@ impl PlatformTrait for SDLPlatform {
                     repeat,
                     ..
                 } => {
+                    // println!("{:?}", keycode);
+
                     if let Some(keycode) = keycode {
                         let shift_mod: bool = keymod.bits()
                             & (sdl2::keyboard::Mod::LSHIFTMOD.bits()
@@ -111,6 +113,12 @@ impl PlatformTrait for SDLPlatform {
 
                         if keycode == keyboard::Keycode::Return {
                             char = Some('\n')
+                        }
+
+                        if shift_mod {
+                            if keyboard::Keycode::Minus == keycode {
+                                char = Some('_')
+                            }
                         }
 
                         return Some(Event::KeyDown {

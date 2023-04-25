@@ -9,7 +9,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{FileDescriptor, fc::table::Table, Root};
+use crate::{fc::table::Table, Root, FileDirectoryPipe};
 
 pub type Pid = u32;
 
@@ -23,15 +23,11 @@ pub trait Process {
     fn get_proc(&self) -> &Proc;
 }
 
-use crate::fc::channel::{Tx, Rx, new_channel};
-
-type Fd = (Rc<Tx<char>>, Option<Rx<char>>);
-
 pub struct Proc {
     pub pid: Pid,
     pub root: Rc<Root>,
     pub children: RefCell<Vec<Rc<dyn Process>>>,
-    pub descriptor_table: Table<Fd>
+    pub descriptor_table: Table<FileDirectoryPipe>
 }
 
 impl std::fmt::Debug for Proc {
@@ -50,38 +46,6 @@ impl Proc {
             children: RefCell::new(vec![]),
             descriptor_table: Table::new()
         }
-    }
-
-    pub fn open(&self) -> FileDescriptor {
-        let (tx, rx) = new_channel();
-        let channel = (tx, Some(rx));
-
-        let id = self.descriptor_table.add(channel);
-
-        return id as FileDescriptor;
-    }
-
-    pub async fn read(&self, descriptor: FileDescriptor) -> Option<char> {
-        let fd = self.descriptor_table.get(descriptor);
-
-        let rx = std::cell::Ref::map(fd, |f| &f.1);
-
-        if let Some(ref rx) = *rx {
-            // println!("Reading: {descriptor}");
-
-            return rx.read().await
-        } else {
-            None
-        }
-    }
-
-    pub fn write(&self, descriptor: FileDescriptor, char: char) -> Option<()> {
-        let fd = self.descriptor_table.get(descriptor);
-
-        // println!("Writng: {descriptor}, {char}");
-
-        let tx = std::cell::Ref::map(fd, |f| &f.0);
-        tx.send(char)
     }
 
     pub fn exit(&self) {

@@ -1,4 +1,4 @@
-use std::pin::Pin;
+use std::{pin::Pin, collections::VecDeque};
 
 pub use std::{future::Future, task::{Poll, Context}};
 
@@ -8,26 +8,26 @@ use crate::fc::table::Table;
 
 pub struct Executor {
     tasks: Table<Box<RefCell<dyn Future<Output = ()>>>>,
-    queue: RefCell<Vec<Box<RefCell<dyn Future<Output = ()>>>>>,
+    queue: RefCell<VecDeque<Box<RefCell<dyn Future<Output = ()>>>>>,
 }
 
 impl Executor {
     pub const fn new() -> Self {
         Executor {
             tasks: Table::new(),
-            queue: RefCell::new(vec![]),
+            queue: RefCell::new(VecDeque::new()),
         }
     }
 
     pub fn add_task<F: Future<Output = ()> + 'static>(&self, task: F) {
-        self.queue.borrow_mut().push(Box::new(RefCell::new(task)));
+        self.queue.borrow_mut().push_front(Box::new(RefCell::new(task)));
     }
 
     pub fn execute(&self) -> bool {
         let mut queue = self.queue.borrow_mut();
 
         while queue.len() != 0 {
-            self.tasks.add(queue.pop().unwrap());
+            self.tasks.add(queue.pop_back().unwrap());
         };
 
         drop(queue);

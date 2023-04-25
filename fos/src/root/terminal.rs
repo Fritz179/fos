@@ -1,14 +1,14 @@
 use crate::Tekenen;
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 pub struct Terminal {
-    buffer: Rc<RefCell<String>>,
+    buffer: RefCell<String>,
 }
 
 impl Terminal {
     pub fn new() -> Terminal {
         Terminal {
-            buffer: Rc::new(RefCell::new(String::new())),
+            buffer: RefCell::new(String::new()),
         }
     }
 

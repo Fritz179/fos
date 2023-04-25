@@ -14,13 +14,15 @@ use terminal::Terminal;
 
 use crate::{platforms::{tekenen::Tekenen, Event, PlatformTrait}, shell::Shell, fc::future::Executor};
 
+// static ro: RefCell<String> = todo!();
+
 pub struct Root {
     pub platform: RefCell<Box<dyn PlatformTrait>>,
     terminal: Terminal,
     proc: Proc,
-    pub fs: Rc<Fs>,
-    pub executor: Rc<Executor>,
-    pub spawner: Rc<Spawner>
+    pub fs: Fs,
+    pub executor: Executor,
+    pub spawner: Spawner
 }
 
 impl Process for Root {
@@ -62,9 +64,9 @@ impl Root {
             platform,
             terminal,
             proc,
-            fs: Rc::new(fs),
-            executor: Rc::new(executor),
-            spawner: Rc::new(Spawner::new()),
+            fs: fs,
+            executor: executor,
+            spawner: Spawner::new(),
         }
     }
 

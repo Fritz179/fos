@@ -11,6 +11,9 @@ use echo::EchoProgram;
 mod ps_tree;
 use ps_tree::PsTreeProgram;
 
+mod cat;
+use cat::CatProgram;
+
 pub struct Shell {
     pub proc: Proc,
     buffer: RefCell<String>,
@@ -113,6 +116,21 @@ impl Shell {
                                 });
 
                                 ps_tree.main();
+                            },
+                            "cat" => {
+                                let (cat, _) = self_clone.proc.spawn::<CatProgram>();
+
+                                // pipe shell stdout to terminal
+                                let self_clone_clone = Rc::clone(&self_clone);
+                                let ps_tree_clone = Rc::clone(&cat);
+                                self_clone.proc.root.executor.add_task(async move {
+                                    loop {
+                                        let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
+                                        self_clone_clone.proc.write(STDOUT, char);
+                                    }
+                                });
+
+                                cat.main(strings);
                             },
                             _ => {
                                 for char in "Invalid command!\n".chars() {

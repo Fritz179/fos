@@ -22,9 +22,9 @@ impl Spawner {
 
         // self.fs.add_pid(child_pid);
 
-        child_proc.open(); // stdin
-        child_proc.open(); // stdout
-        child_proc.open(); // stderr
+        child_proc.pipe(); // stdin
+        child_proc.pipe(); // stdout
+        child_proc.pipe(); // stderr
 
         let child = Rc::new(Child::new(child_proc));
         let id = processes.add(Rc::downgrade(&child) as Weak<dyn Process>);
@@ -54,9 +54,9 @@ impl Spawner {
         // Rc<Root is now valid>
 
         // the proc now has a valid Rc<Root>
-        root.proc.open(); // stdin
-        root.proc.open(); // stdout
-        root.proc.open(); // stderr
+        root.proc.pipe(); // stdin
+        root.proc.pipe(); // stdout
+        root.proc.pipe(); // stderr
 
         let spawner = &root.spawner;
         spawner.processes.add(Rc::downgrade(&root) as Weak<dyn Process>);
