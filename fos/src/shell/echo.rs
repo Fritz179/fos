@@ -27,12 +27,10 @@ impl Process for EchoProgram {
 impl EchoProgram {
     pub fn main(&self, argv: Vec<&str>) {
         for arg in argv {
-            for char in arg.bytes() {
-                self.proc.write(STDOUT, char as char);
-            }
+            self.proc.write(STDOUT, arg);
         }
 
-        self.proc.write(STDOUT, '\n');
+        self.proc.write(STDOUT, "\n");
 
         self.proc.exit();
     }

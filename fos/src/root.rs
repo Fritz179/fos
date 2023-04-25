@@ -80,7 +80,7 @@ impl Root {
         self.executor.add_task(async move {
             loop {
                 let char = self_clone.proc.read(STDIN).await;
-                shell_clone.proc.write(STDIN, char.expect("Option sening to shell"));
+                shell_clone.proc.write(STDIN, &char.expect("Option sening to shell").to_string());
             }
         });
 
@@ -112,7 +112,7 @@ impl Root {
                 }
                 Event::KeyDown { char, keycode, .. } => {
                     if let Some(c) = char {
-                        self.proc.write(STDIN, c);
+                        self.proc.write(STDIN, &c.to_string());
                     } else {
                         println!("unknown char {:?}", keycode)
                     }

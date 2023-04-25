@@ -72,7 +72,7 @@ impl Proc {
         let fs = &self.root.fs;
 
         for entry in fs.inode.0.iter() {
-            if let (name, InodeTypes::File(contet)) = entry {
+            if let (name, InodeTypes::File(content)) = entry {
 
                 if name.0 != filename {
                     continue;
@@ -80,9 +80,8 @@ impl Proc {
 
                 let pipe = self.pipe();
 
-                for char in contet.chars() {
-                    self.write(pipe.clone(), char);
-                }
+                self.write(pipe.clone(), content);
+
 
                 return Ok(pipe);
             }
@@ -93,7 +92,7 @@ impl Proc {
 
     pub fn pipe(&self) -> FileDescriptor {
         let (tx, rx) = new_channel();
-        let channel = FileDirectoryPipe::Pipe((tx, Some(rx)));
+        let channel = FileDirectoryPipe::Pipe((Rc::new(tx), Some(rx)));
 
         let id = self.descriptor_table.add(channel);
 
@@ -120,7 +119,7 @@ impl Proc {
         }
     }
 
-    pub fn write(&self, descriptor: FileDescriptor, char: char) -> Option<()> {
+    pub fn write(&self, descriptor: FileDescriptor, content: &str) -> Option<()> {
         let fd = self.descriptor_table.get(descriptor.0);
 
         // println!("Writng: {descriptor}, {char}");
@@ -131,26 +130,13 @@ impl Proc {
             FileDirectoryPipe::Pipe(txrx) => {
                 let tx = &txrx.0;
 
-                tx.send(char)
+                for char in content.chars() {
+                    tx.send(char);
+                }
+
+                None
             }
         }
-
-        // let tx: std::cell::Ref<Option<Rc<Tx<char>>>> = std::cell::Ref::map(fd, |node| {
-        //     match node {
-        //         Inodes::File(f) => { None }
-        //         Inodes::Directory(f) => { None }
-        //         Inodes::Pipe(txrx) => {
-        //             let tx 
-
-        //             if let Some(ref tx) = *tx {
-        //                 tx.send(char)
-        //             } else {
-        //                 println!("Writing to non pipe");
-        //                 None
-        //             }
-        //         }
-        //     }
-        // });
     }
 }
 

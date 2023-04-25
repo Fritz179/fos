@@ -44,9 +44,7 @@ impl Shell {
         let self_clone = Rc::clone(&self);
         let message = "fritz@tekenen:~$ ".to_string();
 
-        for char in message.chars() {
-            self_clone.proc.write(STDOUT, char);
-        }
+        self_clone.proc.write(STDOUT, &message);
 
         self.proc.root.executor.add_task(async move {
             loop {
@@ -55,7 +53,7 @@ impl Shell {
                 let mut buffer = self_clone.buffer.borrow_mut();
 
                 if char == '\n' {
-                    self_clone.proc.write(STDOUT, char);
+                    self_clone.proc.write(STDOUT, &char.to_string());
 
                     // process command
 
@@ -74,13 +72,6 @@ impl Shell {
                             "echo" => {
                                 let (echo, _) = self_clone.proc.spawn::<EchoProgram>();
 
-                                // pipe shell stdin to echo stdin
-                                // let self_clone_clone = Rc::clone(&self_clone);
-                                // spawner.executor.add_task(async move {
-                                //     loop {
-                                //         self_clone_clone.proc.read(descriptor)
-                                //     }
-                                // });
 
                                 // pipe shell stdout to terminal
                                 let self_clone_clone = Rc::clone(&self_clone);
@@ -88,7 +79,7 @@ impl Shell {
                                 self_clone.proc.root.executor.add_task(async move {
                                     loop {
                                         let char = echo_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, char);
+                                        self_clone_clone.proc.write(STDOUT, &char.to_string());
                                     }
                                 });
 
@@ -97,21 +88,13 @@ impl Shell {
                             "pstree" => {
                                 let (ps_tree, _) = self_clone.proc.spawn::<PsTreeProgram>();
 
-                                // pipe shell stdin to echo stdin
-                                // let self_clone_clone = Rc::clone(&self_clone);
-                                // spawner.executor.add_task(async move {
-                                //     loop {
-                                //         self_clone_clone.proc.read(descriptor)
-                                //     }
-                                // });
-
                                 // pipe shell stdout to terminal
                                 let self_clone_clone = Rc::clone(&self_clone);
                                 let ps_tree_clone = Rc::clone(&ps_tree);
                                 self_clone.proc.root.executor.add_task(async move {
                                     loop {
                                         let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, char);
+                                        self_clone_clone.proc.write(STDOUT, &char.to_string());
                                     }
                                 });
 
@@ -126,29 +109,25 @@ impl Shell {
                                 self_clone.proc.root.executor.add_task(async move {
                                     loop {
                                         let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, char);
+                                        self_clone_clone.proc.write(STDOUT, &char.to_string());
                                     }
                                 });
 
                                 cat.main(strings);
                             },
                             _ => {
-                                for char in "Invalid command!\n".chars() {
-                                    self_clone.proc.write(STDOUT, char);
-                                }
+                                self_clone.proc.write(STDOUT, "Invalid command!\n");
                             }
                         }
                     }
 
                     // prepare new line
-                    for char in message.chars() {
-                        self_clone.proc.write(STDOUT, char);
-                    }
+                    self_clone.proc.write(STDOUT, &message);
 
                     buffer.clear();
                 } else {
                     buffer.push(char);
-                    self_clone.proc.write(STDOUT, char);
+                    self_clone.proc.write(STDOUT, &char.to_string());
                 }
             }
         })

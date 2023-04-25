@@ -40,7 +40,7 @@ impl CatProgram {
             self.proc.root.executor.add_task(async move {
                 loop {
                     let char = self_clone.proc.read(desc.clone()).await.unwrap();
-                    self_clone.proc.write(STDOUT, char);
+                    self_clone.proc.write(STDOUT, &char.to_string());
                 }
             });
         }

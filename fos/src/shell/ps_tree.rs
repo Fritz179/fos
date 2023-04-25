@@ -37,14 +37,12 @@ impl PsTreeProgram {
         let string = format!("[{pid}]{name}");
 
         for _ in 0..indent {
-            self.proc.write(STDOUT, ' ');
+            self.proc.write(STDOUT, " ");
         }
 
-        for c in string.chars() {
-            self.proc.write(STDOUT, c);
-        }
+        self.proc.write(STDOUT, &string);
 
-        self.proc.write(STDOUT, '\n');
+        self.proc.write(STDOUT, "\n");
 
         for child in proc.children.borrow().iter() {
             self.print(child, indent + 2)

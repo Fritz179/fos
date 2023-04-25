@@ -51,7 +51,7 @@ impl<T> Future for ReadingTask<T> {
 
         if shared.closed {
             Poll::Ready(None)
-        } else  if let Some(data) = data {
+        } else if let Some(data) = data {
             Poll::Ready(Some(data))
         } else {
             Poll::Pending
@@ -78,7 +78,7 @@ impl<T> Drop for Rx<T> {
 }
 
 
-pub fn new_channel<T>() -> (Rc<Tx<T>>, Rx<T>) {
+pub fn new_channel<T>() -> (Tx<T>, Rx<T>) {
     let shared = Rc::new(
         RefCell::new(Shared {
             buffer: VecDeque::new(),
@@ -95,7 +95,7 @@ pub fn new_channel<T>() -> (Rc<Tx<T>>, Rx<T>) {
     };
 
     (
-        Rc::new(tx),
+        tx,
         rx
     )
 }
@@ -167,7 +167,9 @@ mod test {
 
     #[test]
     fn multiple_senders() {
-        let (tx1, rx) = new_channel();
+        let (tx, rx) = new_channel();
+
+        let tx1 = Rc::new(tx);
         let tx2 = Rc::clone(&tx1);
 
         let send1 = tx1.send(5);
