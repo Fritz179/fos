@@ -23,7 +23,7 @@ impl PlatformTrait for SDLPlatform {
         let video_subsystem = sdl_context.video().expect("Cannot init video");
 
         let window = video_subsystem
-            .window("Salve!", width as u32, height as u32)
+            .window("Salve!", width, height)
             .position_centered()
             .build()
             .expect("Cannot create window!");
@@ -38,7 +38,7 @@ impl PlatformTrait for SDLPlatform {
             active: true,
         };
 
-        return Box::new(io_manger);
+        Box::new(io_manger)
     }
 
     fn display_pixels(&mut self, pixels: &Pixels) {
@@ -65,7 +65,7 @@ impl PlatformTrait for SDLPlatform {
             .unwrap();
 
         texture
-            .update(sprite, &*pixels, (800 * 4) as usize)
+            .update(sprite, pixels, (800 * 4) as usize)
             .unwrap();
 
         let sprite = Rect::new(0, 0, width, height);
@@ -85,53 +85,53 @@ impl PlatformTrait for SDLPlatform {
                 }
                 sdl2::event::Event::KeyDown {
                     keymod,
-                    keycode,
+                    keycode: Some(keycode),
                     repeat,
                     ..
                 } => {
                     // println!("{:?}", keycode);
 
-                    if let Some(keycode) = keycode {
-                        let shift_mod: bool = keymod.bits()
-                            & (sdl2::keyboard::Mod::LSHIFTMOD.bits()
-                                | sdl2::keyboard::Mod::RSHIFTMOD.bits())
-                            != 0;
-                        let ctrl_mod: bool = keymod.bits()
-                            & (sdl2::keyboard::Mod::LCTRLMOD.bits()
-                                | sdl2::keyboard::Mod::RCTRLMOD.bits())
-                            != 0;
-                        let caps_mod: bool =
-                            keymod.bits() & sdl2::keyboard::Mod::CAPSMOD.bits() != 0;
+                    let shift_mod: bool = keymod.bits()
+                    & (sdl2::keyboard::Mod::LSHIFTMOD.bits()
+                        | sdl2::keyboard::Mod::RSHIFTMOD.bits())
+                    != 0;
+                let ctrl_mod: bool = keymod.bits()
+                    & (sdl2::keyboard::Mod::LCTRLMOD.bits()
+                        | sdl2::keyboard::Mod::RCTRLMOD.bits())
+                    != 0;
+                let caps_mod: bool =
+                    keymod.bits() & sdl2::keyboard::Mod::CAPSMOD.bits() != 0;
 
-                        let charcode = keycode as u32;
-                        let mut char = None;
+                let charcode = keycode as u32;
+                let mut char = None;
 
-                        // Standard ascii code
-                        if charcode >= ' ' as u32 && charcode <= '~' as u32 {
-                            char = char::from_u32(charcode);
-                        }
+                // Standard ascii code
+                if charcode >= ' ' as u32 && charcode <= '~' as u32 {
+                    char = char::from_u32(charcode);
+                }
 
-                        if keycode == keyboard::Keycode::Return {
-                            char = Some('\n')
-                        }
+                if keycode == keyboard::Keycode::Return {
+                    char = Some('\n')
+                }
 
-                        if shift_mod {
-                            if keyboard::Keycode::Minus == keycode {
-                                char = Some('_')
-                            }
-                        }
-
-                        return Some(Event::KeyDown {
-                            repeat,
-                            char,
-                            keycode: Keycode::Temp,
-                            keymod: Keymod {
-                                shift: shift_mod,
-                                ctrl: ctrl_mod,
-                                caps: caps_mod,
-                            },
-                        });
+                if shift_mod {
+                    match keycode {
+                        keyboard::Keycode::Minus => char = Some('_'),
+                        keyboard::Keycode::Comma => char = Some(';'),
+                        _ => { }
                     }
+                }
+
+                return Some(Event::KeyDown {
+                    repeat,
+                    char,
+                    keycode: Keycode::Temp,
+                    keymod: Keymod {
+                        shift: shift_mod,
+                        ctrl: ctrl_mod,
+                        caps: caps_mod,
+                    },
+                });
                 }
                 _ => {
                     // println!("Unhandled event: {:?}", event);
@@ -139,7 +139,7 @@ impl PlatformTrait for SDLPlatform {
             }
         }
 
-        return None;
+        None
     }
 
     fn set_interval(mut callback: Box<dyn FnMut() -> bool>, fps: u32) {

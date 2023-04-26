@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     root::{Proc, Process},
     STDOUT,
@@ -22,11 +24,9 @@ impl Process for EchoProgram {
     fn get_proc(&self) -> &Proc {
         &self.proc
     }
-}
 
-impl EchoProgram {
-    pub fn main(&self, argv: Vec<&str>) {
-        for arg in argv {
+    fn main(self: Rc<Self>, args: Vec<&str>) {
+        for arg in args {
             self.proc.write(STDOUT, arg);
         }
 

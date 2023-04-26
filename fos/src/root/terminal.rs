@@ -12,7 +12,7 @@ impl Terminal {
         }
     }
 
-    pub fn write(&self, string: &String) {
+    pub fn write(&self, string: &str) {
         self.buffer.borrow_mut().push_str(string)
     }
 }

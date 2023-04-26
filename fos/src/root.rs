@@ -1,4 +1,4 @@
-use std::{cell::{RefCell, RefMut}, rc::Rc, fmt};
+use std::{cell::{RefCell, RefMut}, rc::Rc};
 
 mod proc;
 pub use proc::*;
@@ -14,8 +14,6 @@ use terminal::Terminal;
 
 use crate::{platforms::{tekenen::Tekenen, Event, PlatformTrait}, shell::Shell, fc::future::Executor};
 
-// static ro: RefCell<String> = todo!();
-
 pub struct Root {
     pub platform: RefCell<Option<Box<dyn PlatformTrait>>>,
     terminal: Terminal,
@@ -27,21 +25,18 @@ pub struct Root {
 
 impl Process for Root {
     fn new(proc: Proc) -> Root {
-        todo!();
+        let terminal = Terminal::new();
+        let fs = Fs::new();
+        let executor = Executor::new();
 
-        // let platform = RefCell::new(Platform::new(800, 600));
-        // let terminal = Terminal::new();
-        // let fs = Fs::new();
-        // let executor = Executor::new();
-
-        // Root {
-        //     platform,
-        //     terminal,
-        //     proc,
-        //     fs: Rc::new(fs),
-        //     executor: Rc::new(executor),
-        //     spawner: Rc::new(Spawner::new()),
-        // }
+        Root {
+            platform: RefCell::new(None),
+            terminal,
+            proc,
+            fs,
+            executor,
+            spawner: Spawner::new(),
+        }
     }
 
     fn get_process_name(&self) -> &str {
@@ -51,30 +46,12 @@ impl Process for Root {
     fn get_proc(&self) -> &Proc {
         &self.proc
     }
-}
 
-impl Root {
-    pub fn new_2(proc: Proc) -> Root {
-        
-        let terminal = Terminal::new();
-        let fs = Fs::new();
-        let executor = Executor::new();
-
-        Root {
-            platform: RefCell::new(None),
-            terminal,
-            proc,
-            fs: fs,
-            executor: executor,
-            spawner: Spawner::new(),
-        }
-    }
-
-    pub fn main(self: &Rc<Self>) {
-        let (shell, _) = self.proc.spawn::<Shell>();
+    fn main(self: Rc<Self>, _: Vec<&str>) {
+        let shell = self.proc.spawn::<Shell>();
 
         // pipe stdin to shell stdin
-        let self_clone = Rc::clone(self);
+        let self_clone = Rc::clone(&self);
 
         let shell_clone = Rc::clone(&shell);
         self.executor.add_task(async move {
@@ -85,7 +62,7 @@ impl Root {
         });
 
         // pipe shell stdout to terminal
-        let self_clone = Rc::clone(self);
+        let self_clone = Rc::clone(&self);
 
         let shell_clone = Rc::clone(&shell);
         self.executor.add_task(async move {
@@ -96,9 +73,11 @@ impl Root {
             }
         });
 
-        shell.main();
+        shell.main(vec![]);
     }
+}
 
+impl Root {
     pub fn update(&self, tekenen: &mut Tekenen) -> bool {
         self.executor.execute();
 
@@ -125,9 +104,7 @@ impl Root {
                     } else {
                         println!("unknown char {:?}", keycode)
                     }
-                } // _ => {
-                  //     println!("Unhandled event: {:?}", event);
-                  // }
+                }
             }
         }
 
@@ -136,15 +113,6 @@ impl Root {
         platform.display_pixels(tekenen.get_pixels());
 
         // should not stop
-        return false;
-    }
-}
-
-impl fmt::Debug for Root {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Root")
-            //  .field("x", &self.x)
-            //  .field("y", &self.y)
-            .finish()
+        false
     }
 }

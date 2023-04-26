@@ -37,10 +37,8 @@ impl Process for Shell {
     fn get_proc(&self) -> &Proc {
         &self.proc
     }
-}
 
-impl Shell {
-    pub fn main(self: &Rc<Self>) {
+    fn main(self: Rc<Self>, _: Vec<&str>) {
         let self_clone = Rc::clone(&self);
         let message = "fritz@tekenen:~$ ".to_string();
 
@@ -62,66 +60,35 @@ impl Shell {
                         strings.push(string);
                     }
 
-                    // println!("{}", strings.len());
-
-                    if strings.len() > 0 {
+                    if !strings.is_empty() {
                         let command = strings.remove(0);
                         println!("{}", command);
 
-                        match command {
-                            "echo" => {
-                                let (echo, _) = self_clone.proc.spawn::<EchoProgram>();
-
-
-                                // pipe shell stdout to terminal
-                                let self_clone_clone = Rc::clone(&self_clone);
-                                let echo_clone = Rc::clone(&echo);
-                                ROOT.executor.add_task(async move {
-                                    loop {
-                                        let char = echo_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, &char);
-                                    }
-                                });
-
-                                echo.main(strings);
-                            },
-                            "pstree" => {
-                                let (ps_tree, _) = self_clone.proc.spawn::<PsTreeProgram>();
-
-                                // pipe shell stdout to terminal
-                                let self_clone_clone = Rc::clone(&self_clone);
-                                let ps_tree_clone = Rc::clone(&ps_tree);
-                                ROOT.executor.add_task(async move {
-                                    loop {
-                                        let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, &char);
-                                    }
-                                });
-
-                                ps_tree.main();
-                            },
-                            "cat" => {
-                                let (cat, _) = self_clone.proc.spawn::<CatProgram>();
-
-                                // pipe shell stdout to terminal
-                                let self_clone_clone = Rc::clone(&self_clone);
-                                let ps_tree_clone = Rc::clone(&cat);
-                                ROOT.executor.add_task(async move {
-                                    loop {
-                                        let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, &char);
-                                    }
-                                });
-
-                                cat.main(strings);
-                            },
+                        let program: Option<Rc<dyn Process>> = match command {
+                            "echo" => Some(self_clone.proc.spawn::<EchoProgram>()) ,
+                            "pstree" => Some(self_clone.proc.spawn::<PsTreeProgram>()),
+                            "cat" => Some(self_clone.proc.spawn::<CatProgram>()),
                             _ => {
                                 self_clone.proc.write(STDOUT, "Invalid command!\n");
+                                None
                             }
+                        };
+
+                        if let Some(program) = program {
+                            // pipe shell stdout to terminal
+                            let self_clone_clone = Rc::clone(&self_clone);
+                            let program_clone = Rc::clone(&program);
+                            ROOT.executor.add_task(async move {
+                                loop {
+                                    let char = program_clone.get_proc().read(STDOUT).await.unwrap();
+                                    self_clone_clone.proc.write(STDOUT, &char);
+                                }
+                            });
+
+                            program.main(strings);
                         }
                     }
 
-                    // prepare new line
                     self_clone.proc.write(STDOUT, &message);
 
                     buffer.clear();

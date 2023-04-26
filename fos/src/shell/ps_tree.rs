@@ -24,6 +24,13 @@ impl Process for PsTreeProgram {
     fn get_proc(&self) -> &Proc {
         &self.proc
     }
+
+    fn main(self: Rc<Self>, _: Vec<&str>) {
+        let root: Rc<Root> = Rc::clone(&*ROOT);
+        self.print(&(root as Rc<dyn Process>), 0);
+
+        self.proc.exit();
+    }
 }
 
 impl PsTreeProgram {
@@ -49,11 +56,4 @@ impl PsTreeProgram {
         }
         
     } 
-
-    pub fn main(&self) {
-        let root: Rc<Root> = Rc::clone(&*ROOT);
-        self.print(&(root as Rc<dyn Process>), 0);
-
-        self.proc.exit();
-    }
 }

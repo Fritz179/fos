@@ -1,6 +1,6 @@
 use console::{Term, Key, style};
 
-use std::{time::Duration, cell::RefCell};
+use std::cell::RefCell;
 
 use fos::{tekenen::Pixels, Event, Keycode, Keymod, PlatformTrait};
 
@@ -21,13 +21,13 @@ impl PlatformTrait for ShellPlatform {
             height
         };
 
-        return Box::new(io_manger);
+        Box::new(io_manger)
     }
 
     fn display_pixels(&mut self, pixels: &Pixels) {
 
         TERM.with(|term| {
-            term.clear_screen();
+            let _ = term.clear_screen();
         });
 
         let scale = 2;
@@ -81,7 +81,7 @@ impl PlatformTrait for ShellPlatform {
         }
     }
 
-    fn set_interval(mut callback: Box<dyn FnMut() -> bool>, fps: u32) {
+    fn set_interval(mut callback: Box<dyn FnMut() -> bool>, _fps: u32) {
         // let now = std::time::SystemTime::now();
 
         'running: loop {
@@ -94,14 +94,14 @@ impl PlatformTrait for ShellPlatform {
                     NEXT.with(|next| {
                         let mut next = next.borrow_mut();
 
-                        next.insert(key);
+                        let _ = next.insert(key);
                     })
                 }
                 Ok(Key::Enter) => {
                     NEXT.with(|next| {
                         let mut next = next.borrow_mut();
 
-                        next.insert('\n');
+                        let _ = next.insert('\n');
                     })
                 }
                 _ => {

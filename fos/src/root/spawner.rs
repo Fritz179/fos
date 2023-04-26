@@ -1,6 +1,6 @@
 use std::rc::{Weak, Rc};
 
-use crate::{fc::table::Table, Process, Pid, Proc, Root, PlatformTrait, ROOT};
+use crate::{fc::table::Table, Process, Pid, Proc, Root, ROOT};
 
 #[derive(Debug)]
 pub struct Spawner {
@@ -14,7 +14,7 @@ impl Spawner {
         }
     }
 
-    pub fn spawn<Child: Process + 'static>(&self) -> (Rc<Child>, Pid) {
+    pub fn spawn<Child: Process + 'static>(&self) -> Rc<Child> {
         let processes = &self.processes;
 
         let child_pid = processes.next_free() as Pid;
@@ -32,11 +32,11 @@ impl Spawner {
         assert_eq!(child_pid, id as u32);
 
 
-        return (child, child_pid);
+        child
     }
 
     pub fn spawn_root() -> Rc<Root> {
-        let root = Rc::new(Root::new_2(Proc::new(0)));
+        let root = Rc::new(Root::new(Proc::new(0)));
         
         root.proc.pipe(); // stdin
         root.proc.pipe(); // stdout
@@ -51,13 +51,13 @@ impl Spawner {
 }
 
 impl Proc {
-    pub fn spawn<Child: Process + 'static>(&self) -> (Rc<Child>, Pid) {
+    pub fn spawn<Child: Process + 'static>(&self) -> Rc<Child> {
         let mut children = self.children.borrow_mut();
     
-        let (child, pid) = ROOT.spawner.spawn::<Child>();
+        let child = ROOT.spawner.spawn::<Child>();
         let child_clone = Rc::clone(&child);
         children.push(child_clone);
     
-        return (child, pid);
+        child
     }
 }

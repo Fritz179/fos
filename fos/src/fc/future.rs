@@ -50,17 +50,7 @@ impl Executor {
             }
         });
 
-        // println!("{count}");
-        return count == 0;
-    }
-}
-
-impl std::fmt::Debug for Executor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Executor")
-            //  .field("x", &self.x)
-            //  .field("y", &self.y)
-            .finish()
+        count == 0
     }
 }
 

@@ -2,7 +2,6 @@ pub mod font;
 pub mod tekenen;
 pub use tekenen::Tekenen;
 
-// pub use sdl2::keyboard::Keycode;
 #[derive(Debug)]
 pub enum Keycode {
     Temp

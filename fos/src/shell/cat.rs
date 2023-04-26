@@ -24,18 +24,16 @@ impl Process for CatProgram {
     fn get_proc(&self) -> &Proc {
         &self.proc
     }
-}
 
-impl CatProgram {
-    pub fn main(self: &Rc<Self>, argv: Vec<&str>) {
-        assert!(argv.len() == 1);
+    fn main(self: Rc<Self>, args: Vec<&str>) {
+        assert!(args.len() == 1);
 
-        let file = argv[0];
+        let file = args[0];
 
         let read = self.proc.open(file.to_string());
 
         if let Ok(desc) = read {
-            let self_clone = Rc::clone(self);
+            let self_clone = Rc::clone(&self);
 
             ROOT.executor.add_task(async move {
                 loop {
@@ -47,4 +45,8 @@ impl CatProgram {
 
         self.proc.exit();
     }
+}
+
+impl CatProgram {
+
 }

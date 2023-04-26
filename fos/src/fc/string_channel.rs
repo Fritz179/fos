@@ -64,7 +64,7 @@ impl Future for ReadingTask {
 
         if shared.closed {
             Poll::Ready(None)
-        } else if data.len() != 0 {
+        } else if !data.is_empty() {
             Poll::Ready(Some(data))
         } else {
             Poll::Pending

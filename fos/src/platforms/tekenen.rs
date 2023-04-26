@@ -37,10 +37,10 @@ impl Tekenen {
 impl Tekenen {
     pub fn pixel_index(&self, x: i32, y: i32) -> Option<usize> {
         if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 {
-            return None;
+            None
+        } else {
+            Some((y * self.width as i32 + x) as usize)
         }
-
-        return Some((y * self.width as i32 + x) as usize);
     }
 
     pub fn set_pixel(&mut self, x: i32, y: i32, color: Pixel) {
@@ -100,9 +100,6 @@ impl Tekenen {
             // get data by finding offset in charset
             let data = FONT[char as usize - FIRST_CHAR as usize];
 
-            // println!("{}, {}", char, char as usize - FIRST_CHAR as usize);
-            // panic!();
-
             for (yd, line) in data.iter().enumerate() {
                 let y = y + yd as i32 * FONT_SCALE + curr_y;
 
@@ -125,10 +122,10 @@ impl Tekenen {
             curr_x += FONT_SIZE;
         }
 
-        return (curr_x, curr_y);
+        (curr_x, curr_y)
     }
 
-    pub fn draw_terminal(&mut self, buffer: &String, time: u64) {
+    pub fn draw_terminal(&mut self, buffer: &str, time: u64) {
         self.background(BLACK);
 
         let (x, y) = self.draw_text(buffer, 0, 0);

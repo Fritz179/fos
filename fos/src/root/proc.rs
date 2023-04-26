@@ -21,20 +21,14 @@ pub trait Process {
     fn get_process_name(&self) -> &str;
 
     fn get_proc(&self) -> &Proc;
+
+    fn main(self: Rc<Self>, args: Vec<&str>);
 }
 
 pub struct Proc {
     pub pid: Pid,
     pub children: RefCell<Vec<Rc<dyn Process>>>,
     pub descriptor_table: Table<FileDirectoryPipe>
-}
-
-impl std::fmt::Debug for Proc {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Proc")
-            // .field("root", self.root)
-            .finish()
-    }
 }
 
 impl Proc {

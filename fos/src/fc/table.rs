@@ -26,11 +26,15 @@ impl<T> Table<T> {
         self.count.get()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.count.get() == 0
+    }
+
     pub fn next_free(&self) -> usize {
         let items = self.items.borrow();
 
         for i in 0..items.len() {
-            if let None = items[i] {
+            if items[i].is_none() {
                 return i
             }
         };
@@ -45,16 +49,15 @@ impl<T> Table<T> {
         self.count.set(self.count.get() + 1);
 
         for i in 0..items.len() {
-            if let None = items[i] {
+            if items[i].is_none() {
                 items[i] = Some(element);
                 return i;
             }
         }
 
         items.push(Some(element));
-        let index = items.len() - 1;
-
-        return index;
+        
+        items.len() - 1
     }
 
     pub fn remove(&self, index: usize) -> Result<(), ()> {
@@ -79,10 +82,10 @@ impl<T> Table<T> {
 
         if let Some(Some(item)) = item {
             callback(item);
-            return true;
+            true
+        } else {
+            false
         }
-
-        return false;
     }
 
     pub fn filter(&self, callback: &dyn Fn(&T) -> bool) -> usize {
@@ -99,7 +102,7 @@ impl<T> Table<T> {
             }
         }
 
-        return self.count.get()
+        self.count.get()
     }
 }
 
@@ -111,11 +114,15 @@ mod tests {
     fn add_count() {
         let table = Table::new();
 
+        assert_eq!(table.is_empty(), true);
+        assert_eq!(table.len(), 0);
+
         let first = table.add(5);
         let second = table.add(6);
 
         assert_eq!(first, 0);
         assert_eq!(second, 1);
+        assert_eq!(table.is_empty(), false);
         assert_eq!(table.len(), 2);
 
     }
@@ -124,12 +131,21 @@ mod tests {
     fn remove_ok() {
         let table = Table::new();
 
+        assert_eq!(table.is_empty(), true);
+        assert_eq!(table.len(), 0);
+
         table.add(5);
         table.add(6);
 
         let ok_remove = table.remove(1 as usize);
         assert_eq!(ok_remove, Ok(()));
+        assert_eq!(table.is_empty(), false);
         assert_eq!(table.len(), 1);
+
+        let ok_remove = table.remove(0 as usize);
+        assert_eq!(ok_remove, Ok(()));
+        assert_eq!(table.is_empty(), true);
+        assert_eq!(table.len(), 0);
     }
 
     #[test]

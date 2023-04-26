@@ -1,5 +1,5 @@
 mod platforms;
-use std::{cell::{RefCell, UnsafeCell}, rc::{Rc, Weak}, ops::Deref, borrow::BorrowMut};
+use std::{rc::Rc, ops::Deref};
 
 use once_cell::sync::Lazy;
 
@@ -11,9 +11,6 @@ mod shell;
 
 mod root;
 pub use root::*;
-
-// SAFETY:
-// We never use multiple threads.
 
 struct RootWrapper {
     inner: Rc<Root>,
@@ -35,29 +32,28 @@ impl Deref for RootWrapper {
     }
 }
 
+// SAFETY:
+// We never use threads.
 unsafe impl Sync for RootWrapper { }
 unsafe impl Send for RootWrapper { }
+
 static ROOT: Lazy<RootWrapper> = Lazy::new(|| {
     RootWrapper::new()
 });
 
+
 pub fn main<Platform: PlatformTrait + 'static>() {
-    ROOT.main();
+    let root = Rc::clone(&ROOT.inner);
+    root.main(vec![]);
 
-    let platform = Platform::new(800, 600);
-    let platform = platform as Box<dyn PlatformTrait + 'static>;
-
-    let mut curr_platform = ROOT.platform.borrow_mut();
-    *curr_platform = Some(platform);
-
-    drop(curr_platform);
-
-    println!("Dropped");
-
+    // Create and set the platform
+    let platform = Platform::new(800, 600) as Box<dyn PlatformTrait + 'static>;
+    *ROOT.platform.borrow_mut() = Some(platform);
 
     let mut tekenen = Tekenen::new(800, 600);
 
+    println!("All initialized!");
     Platform::set_interval(Box::new(move || {
-        return ROOT.update(&mut tekenen);
+        ROOT.update(&mut tekenen)
     }), 60);
 }

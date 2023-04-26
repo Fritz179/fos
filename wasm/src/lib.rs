@@ -35,8 +35,8 @@ impl PlatformTrait for WASMTerminal {
             let mut queue = queue.borrow_mut();
             let key = queue.pop_front();
 
-            if let Some(key) = key {
-                Some(Event::KeyDown {
+            key.map(|key| {
+                Event::KeyDown {
                     repeat: false, 
                     char: Some(key), 
                     keycode: fos::Keycode::Temp, 
@@ -45,10 +45,8 @@ impl PlatformTrait for WASMTerminal {
                         ctrl: false, 
                         caps: false 
                     }
-                })
-            } else {
-                None
-            }
+                }
+            })
         })
     }
 
@@ -59,7 +57,7 @@ impl PlatformTrait for WASMTerminal {
             if active.is_some() {
                 panic!("Only one interval supported");
             } else {
-                active.insert(Box::new(callback));
+                *active = Some(callback);
             }
         });
 
@@ -89,7 +87,7 @@ pub fn wasm_run_callback() {
         let active = active.as_mut();
 
         if let Some(active) = active {
-            let should_stop = active();
+            let _should_stop = active();
         } else {
             panic!("No callback set!");
         }

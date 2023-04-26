@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::fmt;
 // use std::cell::RefCell;
 
 use crate::{Proc, ROOT};
@@ -55,15 +54,6 @@ impl Fs {
     }
 }
 
-impl fmt::Debug for Fs {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Fs")
-            //  .field("x", &self.x)
-            //  .field("y", &self.y)
-            .finish()
-    }
-}
-
 pub enum OpenError {
     ENOENT,
     ENODIR,
@@ -89,7 +79,7 @@ impl Proc {
             }
         }
 
-        return Err(OpenError::ENOENT);
+        Err(OpenError::ENOENT)
     }
 
     pub fn pipe(&self) -> FileDescriptor {
@@ -101,7 +91,7 @@ impl Proc {
 
         let id = self.descriptor_table.add(channel);
 
-        return FileDescriptor(id);
+        FileDescriptor(id)
     }
 
     pub async fn read(&self, descriptor: FileDescriptor) -> Option<String> {
@@ -109,8 +99,8 @@ impl Proc {
 
         let rx = std::cell::Ref::map(fd, |node| {
             match node {
-                FileDirectoryPipe::File(f) => { &None }
-                FileDirectoryPipe::Directory(f) => { &None }
+                FileDirectoryPipe::File(_) => { &None }
+                FileDirectoryPipe::Directory(_) => { &None }
                 FileDirectoryPipe::Pipe(channel) => { &channel.rx }
             }
         });
@@ -118,7 +108,7 @@ impl Proc {
         if let Some(ref rx) = *rx {
             // println!("Reading: {descriptor}");
 
-            return rx.read().await
+            rx.read().await
         } else {
             None
         }
@@ -129,16 +119,14 @@ impl Proc {
 
         let rx = std::cell::Ref::map(fd, |node| {
             match node {
-                FileDirectoryPipe::File(f) => { &None }
-                FileDirectoryPipe::Directory(f) => { &None }
+                FileDirectoryPipe::File(_) => { &None }
+                FileDirectoryPipe::Directory(_) => { &None }
                 FileDirectoryPipe::Pipe(channel) => { &channel.rx }
             }
         });
 
         if let Some(ref rx) = *rx {
-            // println!("Reading: {descriptor}");
-
-            return rx.read_char().await
+            rx.read_char().await
         } else {
             None
         }
@@ -150,8 +138,8 @@ impl Proc {
         // println!("Writng: {descriptor}, {char}");
 
         match &*fd {
-            FileDirectoryPipe::File(f) => { None }
-            FileDirectoryPipe::Directory(f) => { None }
+            FileDirectoryPipe::File(_) => { None }
+            FileDirectoryPipe::Directory(_) => { None }
             FileDirectoryPipe::Pipe(channel) => {
                 let tx = &channel.tx;
 
@@ -167,8 +155,8 @@ impl Proc {
         // println!("Writng: {descriptor}, {char}");
 
         match &*fd {
-            FileDirectoryPipe::File(f) => { None }
-            FileDirectoryPipe::Directory(f) => { None }
+            FileDirectoryPipe::File(_) => { None }
+            FileDirectoryPipe::Directory(_) => { None }
             FileDirectoryPipe::Pipe(channel) => {
                 let tx = &channel.tx;
 
