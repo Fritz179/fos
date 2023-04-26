@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     root::{Proc, Process},
-    STDOUT,
+    STDOUT, ROOT, Root
 };
 
 pub struct PsTreeProgram {
@@ -51,9 +51,8 @@ impl PsTreeProgram {
     } 
 
     pub fn main(&self) {
-        let root = Rc::clone(&self.proc.root) as Rc<dyn Process>;
-
-        self.print(&root, 0);
+        let root: Rc<Root> = Rc::clone(&*ROOT);
+        self.print(&(root as Rc<dyn Process>), 0);
 
         self.proc.exit();
     }

@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::fmt;
 // use std::cell::RefCell;
 
-use crate::Proc;
+use crate::{Proc, ROOT};
 
 #[derive(Clone)]
 pub struct FileDescriptor(usize);
@@ -71,7 +71,7 @@ pub enum OpenError {
 
 impl Proc {
     pub fn open(&self, filename: String) -> Result<FileDescriptor, OpenError> {
-        let fs = &self.root.fs;
+        let fs = &ROOT.fs;
 
         for entry in fs.inode.0.iter() {
             if let (name, InodeTypes::File(content)) = entry {

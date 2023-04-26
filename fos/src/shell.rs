@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     root::{Proc, Process},
-    STDIN, STDOUT,
+    STDIN, STDOUT, ROOT
 };
 
 mod echo;
@@ -46,7 +46,7 @@ impl Shell {
 
         self_clone.proc.write(STDOUT, &message);
 
-        self.proc.root.executor.add_task(async move {
+        ROOT.executor.add_task(async move {
             loop {
                 let char = self_clone.proc.read_char(STDIN).await.unwrap();
 
@@ -76,7 +76,7 @@ impl Shell {
                                 // pipe shell stdout to terminal
                                 let self_clone_clone = Rc::clone(&self_clone);
                                 let echo_clone = Rc::clone(&echo);
-                                self_clone.proc.root.executor.add_task(async move {
+                                ROOT.executor.add_task(async move {
                                     loop {
                                         let char = echo_clone.proc.read(STDOUT).await.unwrap();
                                         self_clone_clone.proc.write(STDOUT, &char);
@@ -91,7 +91,7 @@ impl Shell {
                                 // pipe shell stdout to terminal
                                 let self_clone_clone = Rc::clone(&self_clone);
                                 let ps_tree_clone = Rc::clone(&ps_tree);
-                                self_clone.proc.root.executor.add_task(async move {
+                                ROOT.executor.add_task(async move {
                                     loop {
                                         let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
                                         self_clone_clone.proc.write(STDOUT, &char);
@@ -106,7 +106,7 @@ impl Shell {
                                 // pipe shell stdout to terminal
                                 let self_clone_clone = Rc::clone(&self_clone);
                                 let ps_tree_clone = Rc::clone(&cat);
-                                self_clone.proc.root.executor.add_task(async move {
+                                ROOT.executor.add_task(async move {
                                     loop {
                                         let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
                                         self_clone_clone.proc.write(STDOUT, &char);

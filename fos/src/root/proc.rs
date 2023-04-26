@@ -9,7 +9,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{fc::table::Table, Root, FileDirectoryPipe};
+use crate::{fc::table::Table, FileDirectoryPipe};
 
 pub type Pid = u32;
 
@@ -25,7 +25,6 @@ pub trait Process {
 
 pub struct Proc {
     pub pid: Pid,
-    pub root: Rc<Root>,
     pub children: RefCell<Vec<Rc<dyn Process>>>,
     pub descriptor_table: Table<FileDirectoryPipe>
 }
@@ -39,10 +38,9 @@ impl std::fmt::Debug for Proc {
 }
 
 impl Proc {
-    pub fn new(pid: Pid, root: Rc<Root>) -> Self {
+    pub const fn new(pid: Pid) -> Self {
         Proc {
             pid,
-            root,
             children: RefCell::new(vec![]),
             descriptor_table: Table::new()
         }

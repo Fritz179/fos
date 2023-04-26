@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, fmt};
+use std::{cell::{RefCell, RefMut}, rc::Rc, fmt};
 
 mod proc;
 pub use proc::*;
@@ -17,7 +17,7 @@ use crate::{platforms::{tekenen::Tekenen, Event, PlatformTrait}, shell::Shell, f
 // static ro: RefCell<String> = todo!();
 
 pub struct Root {
-    pub platform: RefCell<Box<dyn PlatformTrait>>,
+    pub platform: RefCell<Option<Box<dyn PlatformTrait>>>,
     terminal: Terminal,
     proc: Proc,
     pub fs: Fs,
@@ -54,14 +54,14 @@ impl Process for Root {
 }
 
 impl Root {
-    pub fn new_2<Platform: PlatformTrait + 'static>(proc: Proc) -> Root {
-        let platform = RefCell::new(Platform::new(800, 600));
+    pub fn new_2(proc: Proc) -> Root {
+        
         let terminal = Terminal::new();
         let fs = Fs::new();
         let executor = Executor::new();
 
         Root {
-            platform,
+            platform: RefCell::new(None),
             terminal,
             proc,
             fs: fs,
@@ -102,7 +102,16 @@ impl Root {
     pub fn update(&self, tekenen: &mut Tekenen) -> bool {
         self.executor.execute();
 
-        let mut platform = self.platform.borrow_mut();
+        let borrow = self.platform.borrow_mut();
+
+        let mut platform = RefMut::map(borrow, |platform| {
+            if let Some(inner) = platform {
+                inner
+            } else {
+                panic!("No platfrom")
+            }
+        });
+        // let mut platform = platform.borrow_mut();
 
         while let Some(event) = platform.read_events() {
             match event {

@@ -43,9 +43,9 @@ impl PlatformTrait for ShellPlatform {
                 let color = pixels[i as usize];
 
                 if color == 0 {
-                    output.push_str(&style(" ").on_black().to_string())
+                    output.push_str(&style("  ").on_black().to_string())
                 } else {
-                    output.push_str(&style(" ").on_white().to_string())
+                    output.push_str(&style("  ").on_white().to_string())
                 }
             } 
 

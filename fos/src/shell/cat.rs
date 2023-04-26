@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     root::{Proc, Process},
-    STDOUT,
+    STDOUT, ROOT
 };
 
 pub struct CatProgram {
@@ -37,7 +37,7 @@ impl CatProgram {
         if let Ok(desc) = read {
             let self_clone = Rc::clone(self);
 
-            self.proc.root.executor.add_task(async move {
+            ROOT.executor.add_task(async move {
                 loop {
                     let char = self_clone.proc.read(desc.clone()).await.unwrap();
                     self_clone.proc.write(STDOUT, &char.to_string());
