@@ -30,7 +30,7 @@ impl EchoProgram {
             self.proc.write(STDOUT, arg);
         }
 
-        self.proc.write(STDOUT, "\n");
+        self.proc.write_char(STDOUT, '\n');
 
         self.proc.exit();
     }

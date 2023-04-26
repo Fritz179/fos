@@ -80,7 +80,7 @@ impl Root {
         self.executor.add_task(async move {
             loop {
                 let char = self_clone.proc.read(STDIN).await;
-                shell_clone.proc.write(STDIN, &char.expect("Option sening to shell").to_string());
+                shell_clone.proc.write(STDIN, &char.expect("Option sening to shell"));
             }
         });
 
@@ -90,9 +90,9 @@ impl Root {
         let shell_clone = Rc::clone(&shell);
         self.executor.add_task(async move {
             loop {
-                let char = shell_clone.proc.read(STDOUT).await;
+                let string = shell_clone.proc.read(STDOUT).await;
 
-                self_clone.terminal.write(char.expect("Option sening to terminal"));
+                self_clone.terminal.write(&string.expect("Option sening to terminal"));
             }
         });
 

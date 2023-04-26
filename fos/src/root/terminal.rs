@@ -12,8 +12,8 @@ impl Terminal {
         }
     }
 
-    pub fn write(&self, c: char) {
-        self.buffer.borrow_mut().push(c)
+    pub fn write(&self, string: &String) {
+        self.buffer.borrow_mut().push_str(string)
     }
 }
 

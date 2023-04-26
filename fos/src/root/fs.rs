@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::rc::Rc;
 use std::fmt;
 // use std::cell::RefCell;
@@ -11,14 +10,17 @@ pub const STDIN: FileDescriptor = FileDescriptor(0);
 pub const STDOUT: FileDescriptor = FileDescriptor(1);
 pub const STDERR: FileDescriptor = FileDescriptor(2);
 
-use crate::fc::channel::{Tx, Rx, new_channel};
+use crate::fc::string_channel::*;
 
-pub type TxRx = (Rc<Tx<char>>, Option<Rx<char>>);
+pub struct ChannelHolder {
+    tx: Rc<Tx>,
+    rx: Option<Rx>
+}
 
 pub enum FileDirectoryPipe {
     File(String),
     Directory(Vec<String>),
-    Pipe(TxRx)
+    Pipe(ChannelHolder)
 }
 
 pub struct EntryName(String);
@@ -28,7 +30,7 @@ pub struct Directory(Vec<(EntryName, InodeTypes)>);
 pub enum InodeTypes {
     File(String),
     Directory(Directory),
-    Pipe(TxRx)
+    Pipe(ChannelHolder)
 }
 
 pub struct Inode {
@@ -91,22 +93,25 @@ impl Proc {
     }
 
     pub fn pipe(&self) -> FileDescriptor {
-        let (tx, rx) = new_channel();
-        let channel = FileDirectoryPipe::Pipe((Rc::new(tx), Some(rx)));
+        let (tx, rx) = new_string_channel();
+        let channel = FileDirectoryPipe::Pipe(ChannelHolder {
+            tx: Rc::new(tx), 
+            rx: Some(rx) 
+        });
 
         let id = self.descriptor_table.add(channel);
 
         return FileDescriptor(id);
     }
 
-    pub async fn read(&self, descriptor: FileDescriptor) -> Option<char> {
+    pub async fn read(&self, descriptor: FileDescriptor) -> Option<String> {
         let fd = self.descriptor_table.get(descriptor.0);
 
         let rx = std::cell::Ref::map(fd, |node| {
             match node {
                 FileDirectoryPipe::File(f) => { &None }
                 FileDirectoryPipe::Directory(f) => { &None }
-                FileDirectoryPipe::Pipe(txrx) => { &txrx.1 }
+                FileDirectoryPipe::Pipe(channel) => { &channel.rx }
             }
         });
 
@@ -114,6 +119,26 @@ impl Proc {
             // println!("Reading: {descriptor}");
 
             return rx.read().await
+        } else {
+            None
+        }
+    }
+
+    pub async fn read_char(&self, descriptor: FileDescriptor) -> Option<char> {
+        let fd = self.descriptor_table.get(descriptor.0);
+
+        let rx = std::cell::Ref::map(fd, |node| {
+            match node {
+                FileDirectoryPipe::File(f) => { &None }
+                FileDirectoryPipe::Directory(f) => { &None }
+                FileDirectoryPipe::Pipe(channel) => { &channel.rx }
+            }
+        });
+
+        if let Some(ref rx) = *rx {
+            // println!("Reading: {descriptor}");
+
+            return rx.read_char().await
         } else {
             None
         }
@@ -127,14 +152,27 @@ impl Proc {
         match &*fd {
             FileDirectoryPipe::File(f) => { None }
             FileDirectoryPipe::Directory(f) => { None }
-            FileDirectoryPipe::Pipe(txrx) => {
-                let tx = &txrx.0;
+            FileDirectoryPipe::Pipe(channel) => {
+                let tx = &channel.tx;
 
-                for char in content.chars() {
-                    tx.send(char);
-                }
+                tx.send(content)
+            }
+        }
+    }
 
-                None
+
+    pub fn write_char(&self, descriptor: FileDescriptor, content: char) -> Option<()> {
+        let fd = self.descriptor_table.get(descriptor.0);
+
+        // println!("Writng: {descriptor}, {char}");
+
+        match &*fd {
+            FileDirectoryPipe::File(f) => { None }
+            FileDirectoryPipe::Directory(f) => { None }
+            FileDirectoryPipe::Pipe(channel) => {
+                let tx = &channel.tx;
+
+                tx.send_char(content)
             }
         }
     }

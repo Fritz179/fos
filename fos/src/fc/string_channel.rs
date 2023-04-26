@@ -114,7 +114,7 @@ impl Drop for Rx {
 }
 
 
-pub fn new_channel() -> (Tx, Rx) {
+pub fn new_string_channel() -> (Tx, Rx) {
     let shared = Rc::new(
         RefCell::new(Shared {
             buffer: String::new(),
@@ -147,7 +147,7 @@ mod test {
 
     #[test]
     fn transmit_sequntial() {
-        let (tx, rx) = new_channel();
+        let (tx, rx) = new_string_channel();
 
         // First message
         let sent = tx.send(STR_A);
@@ -166,7 +166,7 @@ mod test {
 
     #[test]
     fn transmit_twice() {
-        let (tx, rx) = new_channel();
+        let (tx, rx) = new_string_channel();
 
         // Send bot messages
         let sent1 = tx.send(&STR_A);
@@ -184,7 +184,7 @@ mod test {
 
     #[test]
     fn rx_closed() {
-        let (tx, rx) = new_channel();
+        let (tx, rx) = new_string_channel();
         drop(rx);
 
         let sent = tx.send(&STR_A);
@@ -194,7 +194,7 @@ mod test {
 
     #[test]
     fn tx_closed() {
-        let (tx, rx) = new_channel();
+        let (tx, rx) = new_string_channel();
         drop(tx);
 
         let recv1 = Executor::block(rx.read());
@@ -206,7 +206,7 @@ mod test {
 
     #[test]
     fn multiple_senders() {
-        let (tx, rx) = new_channel();
+        let (tx, rx) = new_string_channel();
 
         let tx1 = Rc::new(tx);
         let tx2 = Rc::clone(&tx1);
@@ -223,7 +223,7 @@ mod test {
 
     #[test]
     fn send_char() {
-        let (tx, rx) = new_channel();
+        let (tx, rx) = new_string_channel();
 
         let send1 = tx.send(&STR_A);
         let send2 = tx.send_char('b');
@@ -237,7 +237,7 @@ mod test {
 
     #[test]
     fn read_char() {
-        let (tx, rx) = new_channel();
+        let (tx, rx) = new_string_channel();
 
         let send = tx.send(&STR_AB);
 

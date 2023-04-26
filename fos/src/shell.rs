@@ -48,7 +48,7 @@ impl Shell {
 
         self.proc.root.executor.add_task(async move {
             loop {
-                let char = self_clone.proc.read(STDIN).await.unwrap();
+                let char = self_clone.proc.read_char(STDIN).await.unwrap();
 
                 let mut buffer = self_clone.buffer.borrow_mut();
 
@@ -79,7 +79,7 @@ impl Shell {
                                 self_clone.proc.root.executor.add_task(async move {
                                     loop {
                                         let char = echo_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, &char.to_string());
+                                        self_clone_clone.proc.write(STDOUT, &char);
                                     }
                                 });
 
@@ -94,7 +94,7 @@ impl Shell {
                                 self_clone.proc.root.executor.add_task(async move {
                                     loop {
                                         let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, &char.to_string());
+                                        self_clone_clone.proc.write(STDOUT, &char);
                                     }
                                 });
 
@@ -109,7 +109,7 @@ impl Shell {
                                 self_clone.proc.root.executor.add_task(async move {
                                     loop {
                                         let char = ps_tree_clone.proc.read(STDOUT).await.unwrap();
-                                        self_clone_clone.proc.write(STDOUT, &char.to_string());
+                                        self_clone_clone.proc.write(STDOUT, &char);
                                     }
                                 });
 
