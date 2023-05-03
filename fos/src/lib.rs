@@ -1,5 +1,5 @@
 mod platforms;
-use std::{rc::Rc, ops::Deref};
+use std::{ops::Deref, rc::Rc};
 
 use once_cell::sync::Lazy;
 
@@ -34,13 +34,10 @@ impl Deref for RootWrapper {
 
 // SAFETY:
 // We never use threads.
-unsafe impl Sync for RootWrapper { }
-unsafe impl Send for RootWrapper { }
+unsafe impl Sync for RootWrapper {}
+unsafe impl Send for RootWrapper {}
 
-static ROOT: Lazy<RootWrapper> = Lazy::new(|| {
-    RootWrapper::new()
-});
-
+static ROOT: Lazy<RootWrapper> = Lazy::new(|| RootWrapper::new());
 
 pub fn main<Platform: PlatformTrait + 'static>() {
     let root = Rc::clone(&ROOT.inner);
@@ -55,7 +52,5 @@ pub fn main<Platform: PlatformTrait + 'static>() {
     tekenen.background(tekenen::BLACK);
 
     println!("All initialized!");
-    Platform::set_interval(Box::new(move || {
-        ROOT.update(&mut tekenen)
-    }), 60);
+    Platform::set_interval(Box::new(move || ROOT.update(&mut tekenen)), 60);
 }

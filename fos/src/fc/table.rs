@@ -35,9 +35,9 @@ impl<T> Table<T> {
 
         for i in 0..items.len() {
             if items[i].is_none() {
-                return i
+                return i;
             }
-        };
+        }
 
         items.len()
     }
@@ -56,21 +56,21 @@ impl<T> Table<T> {
         }
 
         items.push(Some(element));
-        
+
         items.len() - 1
     }
 
     pub fn remove(&self, index: usize) -> Result<(), ()> {
-        let mut  items = self.items.borrow_mut();
+        let mut items = self.items.borrow_mut();
 
         if index >= items.len() {
-            return Err(())
+            return Err(());
         }
-        
+
         if items.get(index).unwrap().is_some() {
             self.count.set(self.count.get() - 1);
             items[index] = None;
-            return Ok(())
+            return Ok(());
         }
 
         Err(())
@@ -124,7 +124,6 @@ mod tests {
         assert_eq!(second, 1);
         assert_eq!(table.is_empty(), false);
         assert_eq!(table.len(), 2);
-
     }
 
     #[test]
@@ -158,7 +157,6 @@ mod tests {
         let err_remove = table.remove(5 as usize);
         assert_eq!(err_remove, Err(()));
         assert_eq!(table.len(), 2);
-
     }
 
     #[test]
@@ -184,9 +182,7 @@ mod tests {
         table.add(6);
         table.add(7);
 
-        let size = table.filter(&|element: &i32| -> bool {
-            *element != 6
-        });
+        let size = table.filter(&|element: &i32| -> bool { *element != 6 });
 
         assert_eq!(size, 2);
         assert_eq!(table.len(), 2);

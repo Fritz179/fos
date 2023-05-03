@@ -4,12 +4,14 @@
 
 // Every process has a root which has the usefull all functions
 
-use std::{
-    cell::RefCell,
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
-use crate::{fc::{channel_handler::{ChannelHandler, new_channel_handler, Writable, Readable, Closed, RawHandler}, table::Table}};
+use crate::fc::{
+    channel_handler::{
+        new_channel_handler, ChannelHandler, Closed, RawHandler, Readable, Writable,
+    },
+    table::Table,
+};
 
 pub type Pid = u32;
 
@@ -17,7 +19,7 @@ pub trait Process {
     fn new(proc: Proc) -> Self
     where
         Self: Sized;
-    
+
     fn get_process_name(&self) -> &str;
 
     fn get_proc(&self) -> &Proc;
@@ -35,9 +37,9 @@ pub struct Proc {
 
 impl Proc {
     pub fn new(pid: Pid) -> Self {
-        let stdin = new_channel_handler().close_write(); 
+        let stdin = new_channel_handler().close_write();
         let stdout = new_channel_handler().close_read();
-        
+
         let descriptor_table = Table::new();
 
         Proc {

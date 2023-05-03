@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     root::{Proc, Process},
-    ROOT
+    ROOT,
 };
 
 mod echo;
@@ -65,7 +65,7 @@ impl Process for Shell {
                         println!("{}", command);
 
                         let program: Option<Rc<dyn Process>> = match command {
-                            "echo" => Some(self_clone.proc.spawn::<EchoProgram>()) ,
+                            "echo" => Some(self_clone.proc.spawn::<EchoProgram>()),
                             "pstree" => Some(self_clone.proc.spawn::<PsTreeProgram>()),
                             "cat" => Some(self_clone.proc.spawn::<CatProgram>()),
                             _ => {
@@ -80,7 +80,8 @@ impl Process for Shell {
                             let program_clone = Rc::clone(&program);
                             ROOT.executor.add_task(async move {
                                 loop {
-                                    let str = program_clone.get_proc().stdout.raw.read().await.unwrap();
+                                    let str =
+                                        program_clone.get_proc().stdout.raw.read().await.unwrap();
                                     self_clone_clone.proc.stdout.write(&str);
                                 }
                             });

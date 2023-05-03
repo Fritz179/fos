@@ -1,5 +1,5 @@
-use super::future::{Future, Poll, Context};
-use std::{pin::Pin, rc::Rc, collections::VecDeque, cell::RefCell};
+use super::future::{Context, Future, Poll};
+use std::{cell::RefCell, collections::VecDeque, pin::Pin, rc::Rc};
 
 struct Shared<T> {
     buffer: VecDeque<T>,
@@ -7,7 +7,7 @@ struct Shared<T> {
 }
 
 pub struct Tx<T> {
-    shared: Rc<RefCell<Shared<T>>>
+    shared: Rc<RefCell<Shared<T>>>,
 }
 
 impl<T> Tx<T> {
@@ -20,8 +20,6 @@ impl<T> Tx<T> {
         } else {
             None
         }
-
-        
     }
 }
 
@@ -33,13 +31,12 @@ impl<T> Drop for Tx<T> {
     }
 }
 
-
 pub struct Rx<T> {
-    shared: Rc<RefCell<Shared<T>>>
+    shared: Rc<RefCell<Shared<T>>>,
 }
 
 struct ReadingTask<T> {
-    shared: Rc<RefCell<Shared<T>>>
+    shared: Rc<RefCell<Shared<T>>>,
 }
 
 impl<T> Future for ReadingTask<T> {
@@ -62,7 +59,7 @@ impl<T> Future for ReadingTask<T> {
 impl<T> Rx<T> {
     pub async fn read(&self) -> Option<T> {
         let future = ReadingTask {
-            shared: Rc::clone(&self.shared)
+            shared: Rc::clone(&self.shared),
         };
 
         future.await
@@ -77,33 +74,25 @@ impl<T> Drop for Rx<T> {
     }
 }
 
-
 pub fn new_channel<T>() -> (Tx<T>, Rx<T>) {
-    let shared = Rc::new(
-        RefCell::new(Shared {
-            buffer: VecDeque::new(),
-            closed: false,
-        })
-    );
+    let shared = Rc::new(RefCell::new(Shared {
+        buffer: VecDeque::new(),
+        closed: false,
+    }));
 
     let tx = Tx {
-        shared: Rc::clone(&shared)
+        shared: Rc::clone(&shared),
     };
 
-    let rx = Rx {
-        shared
-    };
+    let rx = Rx { shared };
 
-    (
-        tx,
-        rx
-    )
+    (tx, rx)
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::super::future::Executor;
+    use super::*;
 
     #[test]
     fn transmit_sequntial() {
@@ -115,7 +104,7 @@ mod test {
 
         assert_eq!(sent, Some(()));
         assert_eq!(recv, Some(5));
-        
+
         // Second message
         let sent = tx.send(6);
         let recv = Executor::block(rx.read());
@@ -139,7 +128,7 @@ mod test {
         // First message
         assert_eq!(sent1, Some(()));
         assert_eq!(recv1, Some(5));
-        
+
         // Second message
         assert_eq!(sent2, Some(()));
         assert_eq!(recv2, Some(6));

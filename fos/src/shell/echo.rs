@@ -1,8 +1,6 @@
 use std::rc::Rc;
 
-use crate::{
-    root::{Proc, Process}
-};
+use crate::root::{Proc, Process};
 
 pub struct EchoProgram {
     pub proc: Proc,

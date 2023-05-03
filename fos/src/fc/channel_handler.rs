@@ -2,22 +2,21 @@ use std::rc::Rc;
 
 use super::string_channel::*;
 
-
 pub struct Readable;
 pub struct Writable;
 pub struct Closed;
 
 pub struct RawHandler {
     tx: Option<Rc<Tx>>,
-    rx: Option<Rx>
+    rx: Option<Rx>,
 }
 
 impl RawHandler {
-    pub async fn read(&self) -> Option<String>  {
+    pub async fn read(&self) -> Option<String> {
         self.rx.as_ref()?.read().await
     }
 
-    pub async fn read_char(&self) -> Option<char>  {
+    pub async fn read_char(&self) -> Option<char> {
         self.rx.as_ref()?.read_char().await
     }
 
@@ -36,17 +35,14 @@ impl RawHandler {
             None
         };
 
-        RawHandler {
-            tx,
-            rx: None
-        }
+        RawHandler { tx, rx: None }
     }
 }
 
 pub struct ChannelHandler<Readabylity, Writability> {
     readability: std::marker::PhantomData<Readabylity>,
     writabiliry: std::marker::PhantomData<Writability>,
-    pub raw: RawHandler
+    pub raw: RawHandler,
 }
 
 impl ChannelHandler<Readable, Writable> {
@@ -57,9 +53,9 @@ impl ChannelHandler<Readable, Writable> {
             readability: std::marker::PhantomData::<Readable>,
             writabiliry: std::marker::PhantomData::<Writable>,
             raw: RawHandler {
-                tx: Some(Rc::new(tx)), 
-                rx: Some(rx)
-            }
+                tx: Some(Rc::new(tx)),
+                rx: Some(rx),
+            },
         }
     }
 }
@@ -69,7 +65,7 @@ impl<R, W> ChannelHandler<R, W> {
         ChannelHandler {
             readability: std::marker::PhantomData::<Closed>,
             writabiliry: std::marker::PhantomData::<W>,
-            raw: self.raw.copy()
+            raw: self.raw.copy(),
         }
     }
 
@@ -79,11 +75,11 @@ impl<R, W> ChannelHandler<R, W> {
 }
 
 impl<T> ChannelHandler<Readable, T> {
-    pub async fn read(&self) -> Option<String>  {
+    pub async fn read(&self) -> Option<String> {
         self.raw.read().await
     }
 
-    pub async fn read_char(&self) -> Option<char>  {
+    pub async fn read_char(&self) -> Option<char> {
         self.raw.read_char().await
     }
 
@@ -91,7 +87,7 @@ impl<T> ChannelHandler<Readable, T> {
         ChannelHandler {
             readability: std::marker::PhantomData::<Closed>,
             writabiliry: std::marker::PhantomData::<T>,
-            raw: self.raw
+            raw: self.raw,
         }
     }
 }
@@ -109,7 +105,7 @@ impl<T> ChannelHandler<T, Writable> {
         ChannelHandler {
             readability: std::marker::PhantomData::<T>,
             writabiliry: std::marker::PhantomData::<Closed>,
-            raw: self.raw
+            raw: self.raw,
         }
     }
 }
@@ -118,10 +114,10 @@ pub fn new_channel_handler() -> ChannelHandler<Readable, Writable> {
     ChannelHandler::new()
 }
 
- #[cfg(test)]
+#[cfg(test)]
 mod test {
-    use super::*;
     use super::super::future::Executor;
+    use super::*;
 
     const STR_A: &str = "a";
     // const STR_B: &str = "b";

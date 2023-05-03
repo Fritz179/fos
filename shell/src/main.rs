@@ -1,4 +1,4 @@
-use console::{Term, Key, style};
+use console::{style, Key, Term};
 
 use std::cell::RefCell;
 
@@ -16,16 +16,12 @@ pub struct ShellPlatform {
 
 impl PlatformTrait for ShellPlatform {
     fn new(width: u32, height: u32) -> Box<ShellPlatform> {
-        let io_manger = ShellPlatform {
-            width,
-            height
-        };
+        let io_manger = ShellPlatform { width, height };
 
         Box::new(io_manger)
     }
 
     fn display_pixels(&mut self, pixels: &Pixels) {
-
         TERM.with(|term| {
             let _ = term.clear_screen();
         });
@@ -34,10 +30,7 @@ impl PlatformTrait for ShellPlatform {
 
         let mut output = String::new();
 
-
         for y in 0..self.height / scale / 2 {
-
-
             for x in 0..self.width / scale {
                 let i = (y * self.width + x) * scale * 4;
                 let color = pixels[i as usize];
@@ -47,13 +40,12 @@ impl PlatformTrait for ShellPlatform {
                 } else {
                     output.push_str(&style("  ").on_white().to_string())
                 }
-            } 
+            }
 
             output.push('\n')
-        }   
+        }
 
         println!("{}", output)
-
     }
 
     fn read_events(&mut self) -> Option<Event> {
@@ -64,7 +56,6 @@ impl PlatformTrait for ShellPlatform {
         });
 
         if let Some(key) = char {
-
             Some(Event::KeyDown {
                 repeat: false,
                 char: Some(key),
@@ -72,8 +63,8 @@ impl PlatformTrait for ShellPlatform {
                 keymod: Keymod {
                     shift: false,
                     ctrl: false,
-                    caps: false
-                }
+                    caps: false,
+                },
             })
         } else {
             println!("{:?}", char);
@@ -85,25 +76,19 @@ impl PlatformTrait for ShellPlatform {
         // let now = std::time::SystemTime::now();
 
         'running: loop {
-            let char = TERM.with(|term| {
-                term.read_key()
-            });
+            let char = TERM.with(|term| term.read_key());
 
             match char {
-                Ok(Key::Char(key)) => {
-                    NEXT.with(|next| {
-                        let mut next = next.borrow_mut();
+                Ok(Key::Char(key)) => NEXT.with(|next| {
+                    let mut next = next.borrow_mut();
 
-                        let _ = next.insert(key);
-                    })
-                }
-                Ok(Key::Enter) => {
-                    NEXT.with(|next| {
-                        let mut next = next.borrow_mut();
+                    let _ = next.insert(key);
+                }),
+                Ok(Key::Enter) => NEXT.with(|next| {
+                    let mut next = next.borrow_mut();
 
-                        let _ = next.insert('\n');
-                    })
-                }
+                    let _ = next.insert('\n');
+                }),
                 _ => {
                     println!("{:?}", char);
                 }
@@ -115,7 +100,7 @@ impl PlatformTrait for ShellPlatform {
             if should_stop {
                 break 'running;
             }
-        
+
             // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / fps));
         }
     }

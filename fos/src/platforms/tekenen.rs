@@ -12,7 +12,6 @@ pub const GRAY: Pixel = [51, 51, 51, 255];
 #[allow(dead_code)]
 pub const BLACK: Pixel = [0, 0, 0, 255];
 
-
 pub struct Tekenen {
     pixels: Pixels,
     width: usize,
@@ -55,7 +54,6 @@ impl Tekenen {
 
     #[allow(dead_code)]
     pub fn rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: Pixel) {
-
         for x in x..x + w {
             for y in y..y + h {
                 self.set_pixel(x, y, color);
@@ -65,7 +63,6 @@ impl Tekenen {
 
     #[allow(dead_code)]
     pub fn background(&mut self, color: Pixel) {
-
         for x in 0..self.width {
             for y in 0..self.height {
                 self.set_pixel(x as i32, y as i32, color);

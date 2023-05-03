@@ -1,6 +1,6 @@
-use std::rc::{Weak, Rc};
+use std::rc::{Rc, Weak};
 
-use crate::{fc::table::Table, Process, Pid, Proc, Root, ROOT};
+use crate::{fc::table::Table, Pid, Proc, Process, Root, ROOT};
 
 #[derive(Debug)]
 pub struct Spawner {
@@ -27,7 +27,6 @@ impl Spawner {
 
         assert_eq!(child_pid, id as u32);
 
-
         child
     }
 
@@ -35,7 +34,9 @@ impl Spawner {
         let root = Rc::new(Root::new(Proc::new(0)));
 
         let spawner = &root.spawner;
-        let id = spawner.processes.add(Rc::downgrade(&root) as Weak<dyn Process>);
+        let id = spawner
+            .processes
+            .add(Rc::downgrade(&root) as Weak<dyn Process>);
         assert_eq!(id, 0);
 
         root
@@ -45,11 +46,11 @@ impl Spawner {
 impl Proc {
     pub fn spawn<Child: Process + 'static>(&self) -> Rc<Child> {
         let mut children = self.children.borrow_mut();
-    
+
         let child = ROOT.spawner.spawn::<Child>();
         let child_clone = Rc::clone(&child);
         children.push(child_clone);
-    
+
         child
     }
 }

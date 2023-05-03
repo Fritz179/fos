@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     root::{Proc, Process},
-    ROOT, Root
+    Root, ROOT,
 };
 
 pub struct PsTreeProgram {
@@ -35,7 +35,6 @@ impl Process for PsTreeProgram {
 
 impl PsTreeProgram {
     pub fn print(&self, node: &Rc<dyn Process>, indent: u32) {
-
         let proc = node.get_proc();
 
         let name = node.get_process_name();
@@ -54,6 +53,5 @@ impl PsTreeProgram {
         for child in proc.children.borrow().iter() {
             self.print(child, indent + 2)
         }
-        
-    } 
+    }
 }

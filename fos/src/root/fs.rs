@@ -1,11 +1,11 @@
 use crate::{Proc, ROOT};
 
-use crate::fc::channel_handler::{self, Readable, Writable, Closed};
+use crate::fc::channel_handler::{self, Closed, Readable, Writable};
 
 pub enum FileDirectoryPipe {
     File(String),
     Directory(Vec<String>),
-    Pipe(channel_handler::RawHandler)
+    Pipe(channel_handler::RawHandler),
 }
 
 pub struct EntryName(String);
@@ -15,27 +15,39 @@ pub struct Directory(Vec<(EntryName, InodeTypes)>);
 pub enum InodeTypes {
     File(String),
     Directory(Directory),
-    Pipe(channel_handler::RawHandler)
+    Pipe(channel_handler::RawHandler),
 }
 
 pub struct Inode {
-    inode: InodeTypes
+    inode: InodeTypes,
 }
 
 pub struct Fs {
-    inode: Directory
+    inode: Directory,
 }
 
 impl Fs {
     pub fn new() -> Self {
         Fs {
             inode: Directory(vec![
-                (EntryName("mount-file".to_string()), InodeTypes::File("content_of_mount_file".to_string())),
-                (EntryName("mount_folder".to_string()), InodeTypes::Directory(Directory(vec![
-                    (EntryName("sub_file_1".to_string()), InodeTypes::File("content_of_sub_file_1".to_string())),
-                    (EntryName("sub_file_2".to_string()), InodeTypes::File("content_of_sub_file_2".to_string()))
-                ])))
-            ])
+                (
+                    EntryName("mount-file".to_string()),
+                    InodeTypes::File("content_of_mount_file".to_string()),
+                ),
+                (
+                    EntryName("mount_folder".to_string()),
+                    InodeTypes::Directory(Directory(vec![
+                        (
+                            EntryName("sub_file_1".to_string()),
+                            InodeTypes::File("content_of_sub_file_1".to_string()),
+                        ),
+                        (
+                            EntryName("sub_file_2".to_string()),
+                            InodeTypes::File("content_of_sub_file_2".to_string()),
+                        ),
+                    ])),
+                ),
+            ]),
         }
     }
 }
@@ -46,12 +58,14 @@ pub enum OpenError {
 }
 
 impl Proc {
-    pub fn open(&self, filename: String) -> Result<channel_handler::ChannelHandler<Readable, Closed>, OpenError> {
+    pub fn open(
+        &self,
+        filename: String,
+    ) -> Result<channel_handler::ChannelHandler<Readable, Closed>, OpenError> {
         let fs = &ROOT.fs;
 
         for entry in fs.inode.0.iter() {
             if let (name, InodeTypes::File(content)) = entry {
-
                 if name.0 != filename {
                     continue;
                 }

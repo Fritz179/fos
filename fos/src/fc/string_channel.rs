@@ -1,5 +1,5 @@
-use super::future::{Future, Poll, Context};
-use std::{pin::Pin, rc::Rc, cell::RefCell};
+use super::future::{Context, Future, Poll};
+use std::{cell::RefCell, pin::Pin, rc::Rc};
 
 struct Shared {
     buffer: String,
@@ -7,7 +7,7 @@ struct Shared {
 }
 
 pub struct Tx {
-    shared: Rc<RefCell<Shared>>
+    shared: Rc<RefCell<Shared>>,
 }
 
 impl Tx {
@@ -19,7 +19,7 @@ impl Tx {
             Some(())
         } else {
             None
-        }   
+        }
     }
 
     pub fn send_char(&self, data: char) -> Option<()> {
@@ -30,7 +30,7 @@ impl Tx {
             Some(())
         } else {
             None
-        }   
+        }
     }
 }
 
@@ -42,13 +42,12 @@ impl Drop for Tx {
     }
 }
 
-
 pub struct Rx {
-    shared: Rc<RefCell<Shared>>
+    shared: Rc<RefCell<Shared>>,
 }
 
 struct ReadingTask {
-    shared: Rc<RefCell<Shared>>
+    shared: Rc<RefCell<Shared>>,
 }
 
 impl Future for ReadingTask {
@@ -75,7 +74,7 @@ impl Future for ReadingTask {
 impl Rx {
     pub async fn read(&self) -> Option<String> {
         let future = ReadingTask {
-            shared: Rc::clone(&self.shared)
+            shared: Rc::clone(&self.shared),
         };
 
         future.await
@@ -83,7 +82,7 @@ impl Rx {
 
     pub async fn read_char(&self) -> Option<char> {
         let future = ReadingTask {
-            shared: Rc::clone(&self.shared)
+            shared: Rc::clone(&self.shared),
         };
 
         let string = future.await;
@@ -113,33 +112,25 @@ impl Drop for Rx {
     }
 }
 
-
 pub fn new_string_channel() -> (Tx, Rx) {
-    let shared = Rc::new(
-        RefCell::new(Shared {
-            buffer: String::new(),
-            closed: false,
-        })
-    );
+    let shared = Rc::new(RefCell::new(Shared {
+        buffer: String::new(),
+        closed: false,
+    }));
 
     let tx = Tx {
-        shared: Rc::clone(&shared)
+        shared: Rc::clone(&shared),
     };
 
-    let rx = Rx {
-        shared
-    };
+    let rx = Rx { shared };
 
-    (
-        tx,
-        rx
-    )
+    (tx, rx)
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::super::future::Executor;
+    use super::*;
 
     const STR_A: &str = "a";
     const STR_B: &str = "b";
@@ -155,7 +146,7 @@ mod test {
 
         assert_eq!(sent, Some(()));
         assert_eq!(recv, Some(STR_A.to_string()));
-        
+
         // Second message
         let sent = tx.send(&STR_B);
         let recv = Executor::block(rx.read());
@@ -179,7 +170,6 @@ mod test {
         assert_eq!(sent1, Some(()));
         assert_eq!(sent2, Some(()));
         assert_eq!(recv, Some(STR_AB.to_string()));
-
     }
 
     #[test]

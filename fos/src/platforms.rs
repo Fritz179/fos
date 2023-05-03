@@ -4,7 +4,7 @@ pub use tekenen::Tekenen;
 
 #[derive(Debug)]
 pub enum Keycode {
-    Temp
+    Temp,
 }
 
 #[derive(Debug)]
@@ -26,8 +26,12 @@ pub enum Event {
 }
 
 pub trait PlatformTrait {
-    fn new(width: u32, height: u32) -> Box<Self> where Self: Sized;
+    fn new(width: u32, height: u32) -> Box<Self>
+    where
+        Self: Sized;
     fn display_pixels(&mut self, pixels: &tekenen::Pixels);
     fn read_events(&mut self) -> Option<Event>;
-    fn set_interval(callback: Box<dyn FnMut() -> bool>, fps: u32) where Self: Sized;
+    fn set_interval(callback: Box<dyn FnMut() -> bool>, fps: u32)
+    where
+        Self: Sized;
 }

@@ -42,7 +42,6 @@ impl PlatformTrait for SDLPlatform {
     }
 
     fn display_pixels(&mut self, pixels: &Pixels) {
-
         let (width, height) = self.canvas.output_size().expect("Cannot get canvas size");
 
         assert!(
@@ -64,9 +63,7 @@ impl PlatformTrait for SDLPlatform {
             )
             .unwrap();
 
-        texture
-            .update(sprite, pixels, (800 * 4) as usize)
-            .unwrap();
+        texture.update(sprite, pixels, (800 * 4) as usize).unwrap();
 
         let sprite = Rect::new(0, 0, width, height);
         self.canvas
@@ -92,46 +89,45 @@ impl PlatformTrait for SDLPlatform {
                     // println!("{:?}", keycode);
 
                     let shift_mod: bool = keymod.bits()
-                    & (sdl2::keyboard::Mod::LSHIFTMOD.bits()
-                        | sdl2::keyboard::Mod::RSHIFTMOD.bits())
-                    != 0;
-                let ctrl_mod: bool = keymod.bits()
-                    & (sdl2::keyboard::Mod::LCTRLMOD.bits()
-                        | sdl2::keyboard::Mod::RCTRLMOD.bits())
-                    != 0;
-                let caps_mod: bool =
-                    keymod.bits() & sdl2::keyboard::Mod::CAPSMOD.bits() != 0;
+                        & (sdl2::keyboard::Mod::LSHIFTMOD.bits()
+                            | sdl2::keyboard::Mod::RSHIFTMOD.bits())
+                        != 0;
+                    let ctrl_mod: bool = keymod.bits()
+                        & (sdl2::keyboard::Mod::LCTRLMOD.bits()
+                            | sdl2::keyboard::Mod::RCTRLMOD.bits())
+                        != 0;
+                    let caps_mod: bool = keymod.bits() & sdl2::keyboard::Mod::CAPSMOD.bits() != 0;
 
-                let charcode = keycode as u32;
-                let mut char = None;
+                    let charcode = keycode as u32;
+                    let mut char = None;
 
-                // Standard ascii code
-                if charcode >= ' ' as u32 && charcode <= '~' as u32 {
-                    char = char::from_u32(charcode);
-                }
-
-                if keycode == keyboard::Keycode::Return {
-                    char = Some('\n')
-                }
-
-                if shift_mod {
-                    match keycode {
-                        keyboard::Keycode::Minus => char = Some('_'),
-                        keyboard::Keycode::Comma => char = Some(';'),
-                        _ => { }
+                    // Standard ascii code
+                    if charcode >= ' ' as u32 && charcode <= '~' as u32 {
+                        char = char::from_u32(charcode);
                     }
-                }
 
-                return Some(Event::KeyDown {
-                    repeat,
-                    char,
-                    keycode: Keycode::Temp,
-                    keymod: Keymod {
-                        shift: shift_mod,
-                        ctrl: ctrl_mod,
-                        caps: caps_mod,
-                    },
-                });
+                    if keycode == keyboard::Keycode::Return {
+                        char = Some('\n')
+                    }
+
+                    if shift_mod {
+                        match keycode {
+                            keyboard::Keycode::Minus => char = Some('_'),
+                            keyboard::Keycode::Comma => char = Some(';'),
+                            _ => {}
+                        }
+                    }
+
+                    return Some(Event::KeyDown {
+                        repeat,
+                        char,
+                        keycode: Keycode::Temp,
+                        keymod: Keymod {
+                            shift: shift_mod,
+                            ctrl: ctrl_mod,
+                            caps: caps_mod,
+                        },
+                    });
                 }
                 _ => {
                     // println!("Unhandled event: {:?}", event);

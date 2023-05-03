@@ -1,11 +1,9 @@
 use std::{cell::RefCell, collections::VecDeque};
 
+use fos::{Event, PlatformTrait};
 use wasm_bindgen::prelude::*;
-use fos::{PlatformTrait, Event};
 
-pub struct WASMTerminal {
-
-}
+pub struct WASMTerminal {}
 
 type Callback = Box<dyn FnMut() -> bool>;
 
@@ -14,18 +12,17 @@ thread_local! {
     static KEY_QUEUE: RefCell<VecDeque<char>> = RefCell::new(VecDeque::new());
 }
 
-
 impl PlatformTrait for WASMTerminal {
-    fn new(width: u32, height: u32) -> Box<Self> where Self: Sized {
+    fn new(width: u32, height: u32) -> Box<Self>
+    where
+        Self: Sized,
+    {
         js_set_size(width, height);
 
-        Box::new(WASMTerminal {
-            
-        })
+        Box::new(WASMTerminal {})
     }
 
     fn display_pixels(&mut self, pixels: &fos::tekenen::Pixels) {
-
         // TODO: Use shared array buffers!!
         js_display_pixels(pixels.clone().into_boxed_slice())
     }
@@ -35,22 +32,23 @@ impl PlatformTrait for WASMTerminal {
             let mut queue = queue.borrow_mut();
             let key = queue.pop_front();
 
-            key.map(|key| {
-                Event::KeyDown {
-                    repeat: false, 
-                    char: Some(key), 
-                    keycode: fos::Keycode::Temp, 
-                    keymod: fos::Keymod { 
-                        shift: false, 
-                        ctrl: false, 
-                        caps: false 
-                    }
-                }
+            key.map(|key| Event::KeyDown {
+                repeat: false,
+                char: Some(key),
+                keycode: fos::Keycode::Temp,
+                keymod: fos::Keymod {
+                    shift: false,
+                    ctrl: false,
+                    caps: false,
+                },
             })
         })
     }
 
-    fn set_interval(callback: Box<dyn FnMut() -> bool>, fps: u32) where Self: Sized {
+    fn set_interval(callback: Box<dyn FnMut() -> bool>, fps: u32)
+    where
+        Self: Sized,
+    {
         ACTIVE_CALLBACK.with(|active| {
             let mut active = active.borrow_mut();
 

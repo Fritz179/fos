@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     root::{Proc, Process},
-    ROOT
+    ROOT,
 };
 
 pub struct CatProgram {
@@ -47,6 +47,4 @@ impl Process for CatProgram {
     }
 }
 
-impl CatProgram {
-
-}
+impl CatProgram {}

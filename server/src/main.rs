@@ -11,8 +11,15 @@ fn main() {
     // println!("{dir}");
 
     Command::new("wasm-pack")
-    // .args(["build", "../../wasm", "--target", "web"])
-        .args(["build", "./wasm", "--target", "web", "--out-dir", "../server/src/home/wasm"])
+        // .args(["build", "../../wasm", "--target", "web"])
+        .args([
+            "build",
+            "./wasm",
+            "--target",
+            "web",
+            "--out-dir",
+            "../server/src/home/wasm",
+        ])
         // .args(["build", "../wasm", "--target", "web", "--out-dir", ])
         .status()
         .expect("failed to build wasm");

@@ -1,6 +1,9 @@
-use std::{pin::Pin, collections::VecDeque};
+use std::{collections::VecDeque, pin::Pin};
 
-pub use std::{future::Future, task::{Poll, Context}};
+pub use std::{
+    future::Future,
+    task::{Context, Poll},
+};
 
 use std::cell::RefCell;
 
@@ -20,7 +23,9 @@ impl Executor {
     }
 
     pub fn add_task<F: Future<Output = ()> + 'static>(&self, task: F) {
-        self.queue.borrow_mut().push_front(Box::new(RefCell::new(task)));
+        self.queue
+            .borrow_mut()
+            .push_front(Box::new(RefCell::new(task)));
     }
 
     pub fn execute(&self) -> bool {
@@ -28,27 +33,23 @@ impl Executor {
 
         while queue.len() != 0 {
             self.tasks.add(queue.pop_back().unwrap());
-        };
+        }
 
         drop(queue);
 
-        let count = self.tasks.filter(&|task: &Box<RefCell<dyn Future<Output = ()>>>| -> bool {
-            let mut pinned = unsafe {
-                Pin::new_unchecked( task.borrow_mut())
-            };
+        let count = self
+            .tasks
+            .filter(&|task: &Box<RefCell<dyn Future<Output = ()>>>| -> bool {
+                let mut pinned = unsafe { Pin::new_unchecked(task.borrow_mut()) };
 
-            let fake_cx: u64 = 0;
-            let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
+                let fake_cx: u64 = 0;
+                let mut fake_cx = unsafe { std::mem::transmute(&fake_cx) };
 
-            match Future::poll(pinned.as_mut(), &mut fake_cx) {
-                Poll::Ready(()) => {
-                    false
-                },
-                Poll::Pending => {
-                    true
-                 },
-            }
-        });
+                match Future::poll(pinned.as_mut(), &mut fake_cx) {
+                    Poll::Ready(()) => false,
+                    Poll::Pending => true,
+                }
+            });
 
         count == 0
     }
@@ -66,9 +67,9 @@ impl Executor {
         loop {
             match Future::poll(future.as_mut(), &mut fake_cx) {
                 Poll::Ready(val) => {
-                    return  val;
-                },
-                Poll::Pending => { },
+                    return val;
+                }
+                Poll::Pending => {}
             };
         }
     }
@@ -85,13 +86,14 @@ impl Executor {
         }
 
         // SAFETY: we shadow `future` so it can't be accessed again.
-        let mut futures: Vec<FutureHolder<F>> = futures.iter_mut().map(|f: &mut F| 
-            FutureHolder {
-                future: unsafe { Pin::new_unchecked( f) },
+        let mut futures: Vec<FutureHolder<F>> = futures
+            .iter_mut()
+            .map(|f: &mut F| FutureHolder {
+                future: unsafe { Pin::new_unchecked(f) },
                 done: false,
-                output: None
-            }
-        ).collect();
+                output: None,
+            })
+            .collect();
 
         loop {
             let done = &mut true;
@@ -102,8 +104,8 @@ impl Executor {
                         Poll::Ready(val) => {
                             future.done = true;
                             future.output = Some(val);
-                        },
-                        Poll::Pending => { },
+                        }
+                        Poll::Pending => {}
                     };
                 }
 
@@ -113,12 +115,15 @@ impl Executor {
             });
 
             if *done {
-                break 
+                break;
             }
-        };
+        }
 
         // return only the outputs, in same order as recived order
-        futures.into_iter().map(|t| t.output.expect("Promis must be completed")).collect()
+        futures
+            .into_iter()
+            .map(|t| t.output.expect("Promis must be completed"))
+            .collect()
     }
 }
 
@@ -131,31 +136,23 @@ mod tests {
     struct Task {
         id: char,
         count: i32,
-        report: Rc<RefCell<Vec<char>>>
+        report: Rc<RefCell<Vec<char>>>,
     }
-    
+
     impl Task {
         async fn new_value(id: char, count: i32, report: Rc<RefCell<Vec<char>>>) -> char {
-            let task = Task {
-                id,
-                count,
-                report,
-            };
+            let task = Task { id, count, report };
 
             task.await
         }
 
         async fn new_global(id: char, count: i32, report: Rc<RefCell<Vec<char>>>) {
-            let task = Task {
-                id,
-                count,
-                report,
-            };
+            let task = Task { id, count, report };
 
             task.await;
         }
     }
-    
+
     impl Future for Task {
         type Output = char;
         fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
@@ -172,9 +169,9 @@ mod tests {
     #[test]
     fn block() {
         let report = Rc::new(RefCell::new(vec![]));
-    
+
         let a = Task::new_value('a', 2, Rc::clone(&report));
-    
+
         let value = Executor::block(a);
 
         assert_eq!(value, 'a');
@@ -184,10 +181,10 @@ mod tests {
     #[test]
     fn block_all_a() {
         let report = Rc::new(RefCell::new(vec![]));
-    
+
         let a = Task::new_value('a', 3, Rc::clone(&report));
         let b = Task::new_value('b', 2, Rc::clone(&report));
-    
+
         let value = Executor::block_all(vec![a, b]);
 
         assert_eq!(value, vec!['a', 'b']);
@@ -197,30 +194,30 @@ mod tests {
     #[test]
     fn block_all_b() {
         let report = Rc::new(RefCell::new(vec![]));
-    
+
         let a = Task::new_value('a', 2, Rc::clone(&report));
         let b = Task::new_value('b', 3, Rc::clone(&report));
-    
+
         let value = Executor::block_all(vec![a, b]);
 
         assert_eq!(value, vec!['a', 'b']);
         assert_eq!(*report.borrow(), vec!['a', 'b', 'a', 'b', 'b']);
     }
-    
+
     #[test]
     fn simple_executor() {
         let executor = Executor::new();
         let report = Rc::new(RefCell::new(vec![]));
-    
+
         let a = Task::new_global('a', 2, Rc::clone(&report));
-    
+
         executor.add_task(a);
-    
+
         loop {
             if executor.execute() {
-                break
+                break;
             }
-        };
+        }
 
         assert_eq!(*report.borrow(), vec!['a', 'a']);
     }
@@ -229,18 +226,18 @@ mod tests {
     fn executor() {
         let executor = Executor::new();
         let report = Rc::new(RefCell::new(vec![]));
-    
+
         let a = Task::new_global('a', 3, Rc::clone(&report));
         let b = Task::new_global('b', 2, Rc::clone(&report));
-    
+
         executor.add_task(a);
         executor.add_task(b);
-    
+
         loop {
             if executor.execute() {
-                break
+                break;
             }
-        };
+        }
 
         assert_eq!(*report.borrow(), vec!['a', 'b', 'a', 'b', 'a']);
     }
@@ -249,14 +246,14 @@ mod tests {
     fn executor_mixed() {
         let executor = Executor::new();
         let report = Rc::new(RefCell::new(vec![]));
-    
+
         let a = Task::new_global('a', 4, Rc::clone(&report));
         let b = Task::new_global('b', 2, Rc::clone(&report));
         let c = Task::new_global('c', 2, Rc::clone(&report));
-    
+
         executor.add_task(a);
         executor.add_task(b);
-    
+
         executor.execute();
         executor.add_task(c);
 
@@ -264,7 +261,9 @@ mod tests {
         executor.execute();
         executor.execute();
 
-
-        assert_eq!(*report.borrow(), vec!['a', 'b', 'a', 'b', 'c', 'a', 'c', 'a']);
+        assert_eq!(
+            *report.borrow(),
+            vec!['a', 'b', 'a', 'b', 'c', 'a', 'c', 'a']
+        );
     }
 }

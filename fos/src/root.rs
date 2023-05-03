@@ -1,4 +1,7 @@
-use std::{cell::{RefCell, RefMut}, rc::Rc};
+use std::{
+    cell::{RefCell, RefMut},
+    rc::Rc,
+};
 
 mod proc;
 pub use proc::*;
@@ -12,7 +15,11 @@ pub use spawner::*;
 mod terminal;
 use terminal::Terminal;
 
-use crate::{platforms::{tekenen::Tekenen, Event, PlatformTrait}, shell::Shell, fc::future::Executor};
+use crate::{
+    fc::future::Executor,
+    platforms::{tekenen::Tekenen, Event, PlatformTrait},
+    shell::Shell,
+};
 
 pub struct Root {
     pub platform: RefCell<Option<Box<dyn PlatformTrait>>>,
@@ -20,7 +27,7 @@ pub struct Root {
     proc: Proc,
     pub fs: Fs,
     pub executor: Executor,
-    pub spawner: Spawner
+    pub spawner: Spawner,
 }
 
 impl Process for Root {
@@ -57,7 +64,11 @@ impl Process for Root {
         self.executor.add_task(async move {
             loop {
                 let char = self_clone.proc.stdin.read().await;
-                shell_clone.proc.stdin.raw.send(&char.expect("Option sening to shell"));
+                shell_clone
+                    .proc
+                    .stdin
+                    .raw
+                    .send(&char.expect("Option sening to shell"));
             }
         });
 
@@ -69,7 +80,9 @@ impl Process for Root {
             loop {
                 let string = shell_clone.proc.stdout.raw.read().await;
 
-                self_clone.terminal.write(&string.expect("Option sending to terminal"));
+                self_clone
+                    .terminal
+                    .write(&string.expect("Option sending to terminal"));
             }
         });
 
