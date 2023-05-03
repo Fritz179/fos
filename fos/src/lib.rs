@@ -52,6 +52,8 @@ pub fn main<Platform: PlatformTrait + 'static>() {
 
     let mut tekenen = Tekenen::new(800, 600);
 
+    tekenen.background(tekenen::BLACK);
+
     println!("All initialized!");
     Platform::set_interval(Box::new(move || {
         ROOT.update(&mut tekenen)

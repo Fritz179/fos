@@ -9,7 +9,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{fc::table::Table, FileDirectoryPipe};
+use crate::{fc::{channel_handler::{ChannelHandler, new_channel_handler, Writable, Readable, Closed, RawHandler}, table::Table}};
 
 pub type Pid = u32;
 
@@ -28,15 +28,24 @@ pub trait Process {
 pub struct Proc {
     pub pid: Pid,
     pub children: RefCell<Vec<Rc<dyn Process>>>,
-    pub descriptor_table: Table<FileDirectoryPipe>
+    pub descriptor_table: Table<RawHandler>,
+    pub stdin: ChannelHandler<Readable, Closed>,
+    pub stdout: ChannelHandler<Closed, Writable>,
 }
 
 impl Proc {
-    pub const fn new(pid: Pid) -> Self {
+    pub fn new(pid: Pid) -> Self {
+        let stdin = new_channel_handler().close_write(); 
+        let stdout = new_channel_handler().close_read();
+        
+        let descriptor_table = Table::new();
+
         Proc {
             pid,
             children: RefCell::new(vec![]),
-            descriptor_table: Table::new()
+            descriptor_table,
+            stdin,
+            stdout,
         }
     }
 

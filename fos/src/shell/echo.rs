@@ -1,8 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    root::{Proc, Process},
-    STDOUT,
+    root::{Proc, Process}
 };
 
 pub struct EchoProgram {
@@ -27,10 +26,10 @@ impl Process for EchoProgram {
 
     fn main(self: Rc<Self>, args: Vec<&str>) {
         for arg in args {
-            self.proc.write(STDOUT, arg);
+            self.proc.stdout.write(arg);
         }
 
-        self.proc.write_char(STDOUT, '\n');
+        self.proc.stdout.write_char('\n');
 
         self.proc.exit();
     }

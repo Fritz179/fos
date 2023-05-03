@@ -126,8 +126,6 @@ impl Tekenen {
     }
 
     pub fn draw_terminal(&mut self, buffer: &str, time: u64) {
-        self.background(BLACK);
-
         let (x, y) = self.draw_text(buffer, 0, 0);
 
         const BLINKING_TIME: u64 = 500;

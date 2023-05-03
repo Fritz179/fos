@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     root::{Proc, Process},
-    STDIN, STDOUT, ROOT
+    ROOT
 };
 
 mod echo;
@@ -42,16 +42,16 @@ impl Process for Shell {
         let self_clone = Rc::clone(&self);
         let message = "fritz@tekenen:~$ ".to_string();
 
-        self_clone.proc.write(STDOUT, &message);
+        self_clone.proc.stdout.write(&message);
 
         ROOT.executor.add_task(async move {
             loop {
-                let char = self_clone.proc.read_char(STDIN).await.unwrap();
+                let char = self_clone.proc.stdin.read_char().await.unwrap();
 
                 let mut buffer = self_clone.buffer.borrow_mut();
 
                 if char == '\n' {
-                    self_clone.proc.write(STDOUT, &char.to_string());
+                    self_clone.proc.stdout.write_char(char);
 
                     // process command
 
@@ -69,7 +69,7 @@ impl Process for Shell {
                             "pstree" => Some(self_clone.proc.spawn::<PsTreeProgram>()),
                             "cat" => Some(self_clone.proc.spawn::<CatProgram>()),
                             _ => {
-                                self_clone.proc.write(STDOUT, "Invalid command!\n");
+                                self_clone.proc.stdout.write("Invalid command!\n");
                                 None
                             }
                         };
@@ -80,8 +80,8 @@ impl Process for Shell {
                             let program_clone = Rc::clone(&program);
                             ROOT.executor.add_task(async move {
                                 loop {
-                                    let char = program_clone.get_proc().read(STDOUT).await.unwrap();
-                                    self_clone_clone.proc.write(STDOUT, &char);
+                                    let str = program_clone.get_proc().stdout.raw.read().await.unwrap();
+                                    self_clone_clone.proc.stdout.write(&str);
                                 }
                             });
 
@@ -89,12 +89,12 @@ impl Process for Shell {
                         }
                     }
 
-                    self_clone.proc.write(STDOUT, &message);
+                    self_clone.proc.stdout.write(&message);
 
                     buffer.clear();
                 } else {
                     buffer.push(char);
-                    self_clone.proc.write(STDOUT, &char.to_string());
+                    self_clone.proc.stdout.write_char(char);
                 }
             }
         })

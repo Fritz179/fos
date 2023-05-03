@@ -56,8 +56,8 @@ impl Process for Root {
         let shell_clone = Rc::clone(&shell);
         self.executor.add_task(async move {
             loop {
-                let char = self_clone.proc.read(STDIN).await;
-                shell_clone.proc.write(STDIN, &char.expect("Option sening to shell"));
+                let char = self_clone.proc.stdin.read().await;
+                shell_clone.proc.stdin.raw.send(&char.expect("Option sening to shell"));
             }
         });
 
@@ -67,9 +67,9 @@ impl Process for Root {
         let shell_clone = Rc::clone(&shell);
         self.executor.add_task(async move {
             loop {
-                let string = shell_clone.proc.read(STDOUT).await;
+                let string = shell_clone.proc.stdout.raw.read().await;
 
-                self_clone.terminal.write(&string.expect("Option sening to terminal"));
+                self_clone.terminal.write(&string.expect("Option sending to terminal"));
             }
         });
 
@@ -100,7 +100,7 @@ impl Root {
                 }
                 Event::KeyDown { char, keycode, .. } => {
                     if let Some(c) = char {
-                        self.proc.write(STDIN, &c.to_string());
+                        self.proc.stdin.raw.send_char(c);
                     } else {
                         println!("unknown char {:?}", keycode)
                     }

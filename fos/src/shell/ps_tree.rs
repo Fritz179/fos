@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     root::{Proc, Process},
-    STDOUT, ROOT, Root
+    ROOT, Root
 };
 
 pub struct PsTreeProgram {
@@ -44,12 +44,12 @@ impl PsTreeProgram {
         let string = format!("[{pid}]{name}");
 
         for _ in 0..indent {
-            self.proc.write(STDOUT, " ");
+            self.proc.stdout.write_char(' ');
         }
 
-        self.proc.write(STDOUT, &string);
+        self.proc.stdout.write(&string);
 
-        self.proc.write(STDOUT, "\n");
+        self.proc.stdout.write_char('\n');
 
         for child in proc.children.borrow().iter() {
             self.print(child, indent + 2)

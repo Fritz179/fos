@@ -1,25 +1,11 @@
-use std::rc::Rc;
-// use std::cell::RefCell;
-
 use crate::{Proc, ROOT};
 
-#[derive(Clone)]
-pub struct FileDescriptor(usize);
-pub const STDIN: FileDescriptor = FileDescriptor(0);
-pub const STDOUT: FileDescriptor = FileDescriptor(1);
-pub const STDERR: FileDescriptor = FileDescriptor(2);
-
-use crate::fc::string_channel::*;
-
-pub struct ChannelHolder {
-    tx: Rc<Tx>,
-    rx: Option<Rx>
-}
+use crate::fc::channel_handler::{self, Readable, Writable, Closed};
 
 pub enum FileDirectoryPipe {
     File(String),
     Directory(Vec<String>),
-    Pipe(ChannelHolder)
+    Pipe(channel_handler::RawHandler)
 }
 
 pub struct EntryName(String);
@@ -29,7 +15,7 @@ pub struct Directory(Vec<(EntryName, InodeTypes)>);
 pub enum InodeTypes {
     File(String),
     Directory(Directory),
-    Pipe(ChannelHolder)
+    Pipe(channel_handler::RawHandler)
 }
 
 pub struct Inode {
@@ -60,7 +46,7 @@ pub enum OpenError {
 }
 
 impl Proc {
-    pub fn open(&self, filename: String) -> Result<FileDescriptor, OpenError> {
+    pub fn open(&self, filename: String) -> Result<channel_handler::ChannelHandler<Readable, Closed>, OpenError> {
         let fs = &ROOT.fs;
 
         for entry in fs.inode.0.iter() {
@@ -72,97 +58,22 @@ impl Proc {
 
                 let pipe = self.pipe();
 
-                self.write(pipe.clone(), content);
+                pipe.write(content);
 
-
-                return Ok(pipe);
+                return Ok(pipe.close_write());
             }
         }
 
         Err(OpenError::ENOENT)
     }
 
-    pub fn pipe(&self) -> FileDescriptor {
-        let (tx, rx) = new_string_channel();
-        let channel = FileDirectoryPipe::Pipe(ChannelHolder {
-            tx: Rc::new(tx), 
-            rx: Some(rx) 
-        });
+    pub fn pipe(&self) -> channel_handler::ChannelHandler<Readable, Writable> {
+        let holder = channel_handler::ChannelHandler::new();
+        let raw = holder.copy_raw();
 
-        let id = self.descriptor_table.add(channel);
+        self.descriptor_table.add(raw);
 
-        FileDescriptor(id)
-    }
-
-    pub async fn read(&self, descriptor: FileDescriptor) -> Option<String> {
-        let fd = self.descriptor_table.get(descriptor.0);
-
-        let rx = std::cell::Ref::map(fd, |node| {
-            match node {
-                FileDirectoryPipe::File(_) => { &None }
-                FileDirectoryPipe::Directory(_) => { &None }
-                FileDirectoryPipe::Pipe(channel) => { &channel.rx }
-            }
-        });
-
-        if let Some(ref rx) = *rx {
-            // println!("Reading: {descriptor}");
-
-            rx.read().await
-        } else {
-            None
-        }
-    }
-
-    pub async fn read_char(&self, descriptor: FileDescriptor) -> Option<char> {
-        let fd = self.descriptor_table.get(descriptor.0);
-
-        let rx = std::cell::Ref::map(fd, |node| {
-            match node {
-                FileDirectoryPipe::File(_) => { &None }
-                FileDirectoryPipe::Directory(_) => { &None }
-                FileDirectoryPipe::Pipe(channel) => { &channel.rx }
-            }
-        });
-
-        if let Some(ref rx) = *rx {
-            rx.read_char().await
-        } else {
-            None
-        }
-    }
-
-    pub fn write(&self, descriptor: FileDescriptor, content: &str) -> Option<()> {
-        let fd = self.descriptor_table.get(descriptor.0);
-
-        // println!("Writng: {descriptor}, {char}");
-
-        match &*fd {
-            FileDirectoryPipe::File(_) => { None }
-            FileDirectoryPipe::Directory(_) => { None }
-            FileDirectoryPipe::Pipe(channel) => {
-                let tx = &channel.tx;
-
-                tx.send(content)
-            }
-        }
-    }
-
-
-    pub fn write_char(&self, descriptor: FileDescriptor, content: char) -> Option<()> {
-        let fd = self.descriptor_table.get(descriptor.0);
-
-        // println!("Writng: {descriptor}, {char}");
-
-        match &*fd {
-            FileDirectoryPipe::File(_) => { None }
-            FileDirectoryPipe::Directory(_) => { None }
-            FileDirectoryPipe::Pipe(channel) => {
-                let tx = &channel.tx;
-
-                tx.send_char(content)
-            }
-        }
+        holder
     }
 }
 

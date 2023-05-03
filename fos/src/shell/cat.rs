@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     root::{Proc, Process},
-    STDOUT, ROOT
+    ROOT
 };
 
 pub struct CatProgram {
@@ -37,8 +37,8 @@ impl Process for CatProgram {
 
             ROOT.executor.add_task(async move {
                 loop {
-                    let char = self_clone.proc.read(desc.clone()).await.unwrap();
-                    self_clone.proc.write(STDOUT, &char.to_string());
+                    let content = desc.read().await.unwrap();
+                    self_clone.proc.stdout.write(&content);
                 }
             });
         }
