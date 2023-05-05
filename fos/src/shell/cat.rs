@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    root::{Proc, Process},
+    root::{Proc, Process, descriptor::ReadableDescriptor},
     ROOT,
 };
 
@@ -37,7 +37,7 @@ impl Process for CatProgram {
 
             ROOT.executor.add_task(async move {
                 loop {
-                    let content = desc.read().await.unwrap();
+                    let content = desc.read(50).await.unwrap();
                     self_clone.proc.stdout.write(&content);
                 }
             });

@@ -1,11 +1,14 @@
-use crate::{Proc, ROOT};
+pub mod descriptor;
+pub mod pipe;
 
-use crate::fc::channel_handler::{self, Closed, Readable, Writable};
+use descriptor::{ReadableWritableDescriptor, ReadableDescriptor, WritableDescriptor};
+use pipe::{new_pipe, PipeReader, PipeWriter};
+
+use crate::{Proc, ROOT};
 
 pub enum FileDirectoryPipe {
     File(String),
     Directory(Vec<String>),
-    Pipe(channel_handler::RawHandler),
 }
 
 pub struct EntryName(String);
@@ -15,7 +18,6 @@ pub struct Directory(Vec<(EntryName, InodeTypes)>);
 pub enum InodeTypes {
     File(String),
     Directory(Directory),
-    Pipe(channel_handler::RawHandler),
 }
 
 pub struct Inode {
@@ -61,7 +63,7 @@ impl Proc {
     pub fn open(
         &self,
         filename: String,
-    ) -> Result<channel_handler::ChannelHandler<Readable, Closed>, OpenError> {
+    ) -> Result<ReadableWritableDescriptor<PipeReader, PipeWriter>, OpenError> {
         let fs = &ROOT.fs;
 
         for entry in fs.inode.0.iter() {
@@ -74,20 +76,17 @@ impl Proc {
 
                 pipe.write(content);
 
-                return Ok(pipe.close_write());
+                return Ok(pipe);
             }
         }
 
         Err(OpenError::ENOENT)
     }
 
-    pub fn pipe(&self) -> channel_handler::ChannelHandler<Readable, Writable> {
-        let holder = channel_handler::ChannelHandler::new();
-        let raw = holder.copy_raw();
+    pub fn pipe(&self) -> ReadableWritableDescriptor<PipeReader, PipeWriter> {
+        let (reader, writer) = new_pipe();
 
-        self.descriptor_table.add(raw);
-
-        holder
+        ReadableWritableDescriptor::<PipeReader, PipeWriter>::new(reader, writer)
     }
 }
 

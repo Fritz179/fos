@@ -1,5 +1,5 @@
 use super::future::{Context, Future, Poll};
-use std::{cell::RefCell, pin::Pin, rc::Rc};
+use std::{cell::RefCell, pin::Pin, rc::{Rc, Weak}};
 
 struct Shared {
     buffer: String,
@@ -39,6 +39,36 @@ impl Drop for Tx {
         let mut shared = self.shared.as_ref().borrow_mut();
 
         shared.closed = true;
+    }
+}
+
+pub struct WeakTx {
+    shared: Weak<RefCell<Shared>>,
+}
+
+impl WeakTx {
+    pub fn send(&self, data: &str) -> Option<()> {
+        let shared = self.shared.upgrade()?;
+        let mut shared = shared.borrow_mut();
+
+        if !shared.closed {
+            shared.buffer.push_str(data);
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    pub fn send_char(&self, data: char) -> Option<()> {
+        let shared = self.shared.upgrade()?;
+        let mut shared = shared.borrow_mut();
+
+        if !shared.closed {
+            shared.buffer.push(data);
+            Some(())
+        } else {
+            None
+        }
     }
 }
 
