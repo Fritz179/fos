@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    root::{Proc, Process},
+    root::{Proc, Process, descriptor::{WritableDescriptor}},
     Root, ROOT,
 };
 

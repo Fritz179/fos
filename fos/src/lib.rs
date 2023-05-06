@@ -18,8 +18,10 @@ struct RootWrapper {
 
 impl RootWrapper {
     fn new() -> Self {
+        let child = Spawner::spawn_root();
+
         RootWrapper {
-            inner: Spawner::spawn_root(),
+            inner: child,
         }
     }
 }

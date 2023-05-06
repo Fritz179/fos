@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::root::{Proc, Process};
+use crate::root::{Proc, Process, descriptor::WritableDescriptor};
 
 pub struct EchoProgram {
     pub proc: Proc,

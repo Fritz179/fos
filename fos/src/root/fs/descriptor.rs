@@ -1,5 +1,7 @@
 use std::{future::Future, pin::Pin};
 
+use crate::pipe::{PipeReader, PipeWriter};
+
 #[derive(Debug, PartialEq)]
 pub enum IOError {
     ChannelClosed,
@@ -16,6 +18,7 @@ pub trait ReadableDescriptor {
 pub trait WritableDescriptor {
     fn write(&self, str: &str) -> Result<(), IOError>;
     fn write_char(&self, char: char) -> Result<(), IOError>;
+    fn clone(&self) -> Result<Self, IOError> where Self:Sized;
 }
 
 pub struct ReadableWritableDescriptor<Reader: ReadableDescriptor, Writer: WritableDescriptor>  {
@@ -50,13 +53,17 @@ impl<R: ReadableDescriptor, W: WritableDescriptor> ReadableDescriptor for Readab
     }
 }
 
-impl<R: ReadableDescriptor, W: WritableDescriptor> WritableDescriptor for ReadableWritableDescriptor<R, W> {
-    fn write(&self, str: &str) -> Result<(), IOError> {
+impl<R: ReadableDescriptor, W: WritableDescriptor> ReadableWritableDescriptor<R, W> {
+    pub fn write(&self, str: &str) -> Result<(), IOError> {
         self.writer.write(str)
     }
 
-    fn write_char(&self, char: char) -> Result<(), IOError> {
+    pub fn write_char(&self, char: char) -> Result<(), IOError> {
         self.writer.write_char(char)
+    }
+
+    pub fn clone(&self) -> Result<W, IOError> {
+        self.writer.clone()
     }
 }
 
@@ -69,3 +76,5 @@ impl<R: ReadableDescriptor, W: WritableDescriptor> ReadableWritableDescriptor<R,
         self.reader
     }
 }
+
+pub type ReadableWritablePipe = ReadableWritableDescriptor<PipeReader, PipeWriter>;

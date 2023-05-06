@@ -19,6 +19,7 @@ use crate::{
     fc::future::Executor,
     platforms::{tekenen::Tekenen, Event, PlatformTrait},
     shell::Shell,
+    descriptor::{ReadableDescriptor, WritableDescriptor, ReadableWritablePipe}
 };
 
 pub struct Root {
@@ -63,12 +64,8 @@ impl Process for Root {
         let shell_clone = Rc::clone(&shell);
         self.executor.add_task(async move {
             loop {
-                let char = self_clone.proc.stdin.read().await;
-                shell_clone
-                    .proc
-                    .stdin
-                    .raw
-                    .send(&char.expect("Option sening to shell"));
+                let data = self_clone.proc.stdin.read(50).await;
+                shell_clone.proc.handler.write(&data.expect("Option sending to shell"));
             }
         });
 
@@ -78,7 +75,7 @@ impl Process for Root {
         let shell_clone = Rc::clone(&shell);
         self.executor.add_task(async move {
             loop {
-                let string = shell_clone.proc.stdout.raw.read().await;
+                let string = shell_clone.proc.handler.read(50).await;
 
                 self_clone
                     .terminal
@@ -113,7 +110,7 @@ impl Root {
                 }
                 Event::KeyDown { char, keycode, .. } => {
                     if let Some(c) = char {
-                        self.proc.stdin.raw.send_char(c);
+                        self.proc.handler.write_char(c);
                     } else {
                         println!("unknown char {:?}", keycode)
                     }

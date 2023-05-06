@@ -21,22 +21,6 @@ pub struct PipeWriter {
     shared: Rc<RefCell<Shared>>,
 }
 
-impl PipeWriter {
-    fn clone(&self) -> Result<Self, IOError> {
-        let shared = Rc::clone(&self.shared);
-
-        if let Some(ref mut writers) = shared.borrow_mut().writers {
-            *writers += 1
-        } else {
-            return Err(IOError::ChannelClosed)
-        }
-
-        Ok(PipeWriter {
-            shared
-        })
-    }
-}
-
 impl WritableDescriptor for PipeWriter {
     fn write(&self, data: &str) -> Result<(), IOError> {
         let mut shared = self.shared.as_ref().borrow_mut();
@@ -54,6 +38,20 @@ impl WritableDescriptor for PipeWriter {
 
         shared.buffer.push(data);
         Ok(())
+    }
+
+    fn clone(&self) -> Result<Self, IOError> {
+        let shared = Rc::clone(&self.shared);
+
+        if let Some(ref mut writers) = shared.borrow_mut().writers {
+            *writers += 1
+        } else {
+            return Err(IOError::ChannelClosed)
+        }
+
+        Ok(PipeWriter {
+            shared
+        })
     }
 }
 
@@ -98,6 +96,42 @@ impl Future for ReadingTask {
     }
 }
 
+struct ReadingCharTask {
+    shared: Rc<RefCell<Shared>>,
+}
+
+impl Future for ReadingCharTask {
+    type Output = Result<char, IOError>;
+
+    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<char, IOError>> {
+        let mut shared = self.shared.as_ref().borrow_mut();
+
+        let mut data = String::new();
+
+        // take the data in the buffer and set an empty string in its place
+        std::mem::swap(&mut data, &mut shared.buffer);
+
+        if !data.is_empty() {
+            // SAFETY:
+            // Since we just read a string we know the channel isn't closed.
+            // Also we know that we read the whole string so the buffer is empty.
+            // Also the Ok variant always has a string with length > 0.
+            // Therfore we can just memswap it back.
+
+            let char = data.remove(0);
+            std::mem::swap(&mut data, &mut shared.buffer);
+
+            Poll::Ready(Ok(char))
+        } else {
+
+            // If there are no writers left we will never have anything to read.
+            shared.is_open()?;
+
+            Poll::Pending
+        }
+    }
+}
+
 impl ReadableDescriptor for PipeReader {
     fn read(&self, len: u32) -> Pin<Box<dyn Future<Output = Result<String, IOError>>>> {
         let future = Box::new(ReadingTask {
@@ -110,27 +144,13 @@ impl ReadableDescriptor for PipeReader {
     }
 
     fn read_char(&self) -> Pin<Box<dyn Future<Output = Result<char, IOError>>>> {
-        todo!()
-        // let future = ReadingTask {
-        //     shared: Rc::clone(&self.shared),
-        // };
+        let future = Box::new(ReadingCharTask {
+            shared: Rc::clone(&self.shared),
+        });
 
-        // let string = future.await;
-
-        // if let Ok(mut string) = string {
-        //     // SAFETY:
-        //     // Since we just read a string we know the channel isn't closed.
-        //     // Also we know that we read the whole string so the buffer is empty.
-        //     // Also the Ok variant always has a string with length > 0.
-        //     // Therfore we can just memswap it back.
-
-        //     let char = string.remove(0);
-        //     std::mem::swap(&mut string, &mut self.shared.borrow_mut().buffer);
-
-        //     Ok(char)
-        // } else {
-        //     None
-        // }
+        unsafe {
+            Pin::new_unchecked(future)
+        }
     }
 
     fn read_sync(&self, len: u32) -> Result<String, IOError> {

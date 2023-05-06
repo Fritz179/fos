@@ -6,12 +6,9 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use crate::fc::{
-    channel_handler::{
-        new_channel_handler, ChannelHandler, Closed, RawHandler, Readable, Writable,
-    },
-    table::Table,
-};
+use crate::descriptor::ReadableWritablePipe;
+use crate::fc::table::Table;
+use crate::root::pipe::{new_pipe, PipeReader, PipeWriter};
 
 pub type Pid = u32;
 
@@ -30,24 +27,29 @@ pub trait Process {
 pub struct Proc {
     pub pid: Pid,
     pub children: RefCell<Vec<Rc<dyn Process>>>,
-    pub descriptor_table: Table<RawHandler>,
-    pub stdin: ChannelHandler<Readable, Closed>,
-    pub stdout: ChannelHandler<Closed, Writable>,
+    // pub descriptor_table: Table<RawHandler>,
+    pub stdin: PipeReader,
+    pub stdout: PipeWriter,
+    pub handler: ReadableWritablePipe
 }
 
 impl Proc {
     pub fn new(pid: Pid) -> Self {
-        let stdin = new_channel_handler().close_write();
-        let stdout = new_channel_handler().close_read();
+        let (stdin_reader, stdin_writer) = new_pipe();
+        let (stdout_reader, stdout_writer) = new_pipe();
 
-        let descriptor_table = Table::new();
+
+        // let descriptor_table = Table::new();
+
+        let handler = ReadableWritablePipe::new(stdout_reader, stdin_writer);
 
         Proc {
             pid,
             children: RefCell::new(vec![]),
-            descriptor_table,
-            stdin,
-            stdout,
+            // descriptor_table,
+            stdin: stdin_reader,
+            stdout: stdout_writer,
+            handler
         }
     }
 

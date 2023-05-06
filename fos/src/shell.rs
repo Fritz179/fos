@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    root::{Proc, Process},
+    root::{Proc, Process, descriptor::{WritableDescriptor, ReadableDescriptor, ReadableWritablePipe}},
     ROOT,
 };
 
@@ -81,7 +81,7 @@ impl Process for Shell {
                             ROOT.executor.add_task(async move {
                                 loop {
                                     let str =
-                                        program_clone.get_proc().stdout.raw.read().await.unwrap();
+                                    program_clone.get_proc().handler.read(50).await.unwrap();
                                     self_clone_clone.proc.stdout.write(&str);
                                 }
                             });

@@ -1,6 +1,6 @@
 use std::rc::{Rc, Weak};
 
-use crate::{fc::table::Table, Pid, Proc, Process, Root, ROOT};
+use crate::{fc::table::Table, Pid, Proc, Process, Root, ROOT, pipe::{new_pipe}, descriptor::ReadableWritablePipe};
 
 #[derive(Debug)]
 pub struct Spawner {
@@ -14,7 +14,7 @@ impl Spawner {
         }
     }
 
-    pub fn spawn<Child: Process + 'static>(&self) -> Rc<Child> {
+    pub fn spawn<Child: Process + 'static>(&self) -> Rc<Child>{
         let processes = &self.processes;
 
         let child_pid = processes.next_free() as Pid;
@@ -31,7 +31,9 @@ impl Spawner {
     }
 
     pub fn spawn_root() -> Rc<Root> {
-        let root = Rc::new(Root::new(Proc::new(0)));
+
+        let child_proc = Proc::new(0);
+        let root = Rc::new(Root::new(child_proc));
 
         let spawner = &root.spawner;
         let id = spawner
