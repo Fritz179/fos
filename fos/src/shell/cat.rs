@@ -32,15 +32,21 @@ impl Process for CatProgram {
 
         let read = self.proc.open(file.to_string());
 
-        if let Ok(desc) = read {
-            let self_clone = Rc::clone(&self);
-
-            ROOT.executor.add_task(async move {
-                loop {
-                    let content = desc.read(50).await.unwrap();
-                    self_clone.proc.stdout.write(&content);
-                }
-            });
+        match read {
+            Ok(desc) => {
+                let self_clone = Rc::clone(&self);
+    
+                ROOT.executor.add_task(async move {
+                    loop {
+                        let content = desc.read(50).await.unwrap();
+                        self_clone.proc.stdout.write(&content);
+                    }
+                });
+            },
+            Err(err) => {
+                let err = format!("Error: {:?}", err);
+                self.proc.stdout.write(&err);
+            }
         }
 
         self.proc.exit();

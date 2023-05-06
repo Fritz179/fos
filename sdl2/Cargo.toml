@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 fos = { path = "../fos" }
 sdl2 = "0.35"
+
+[features]
+c64 = ["fos/c64"]

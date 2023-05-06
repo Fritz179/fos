@@ -106,20 +106,8 @@ impl Future for ReadingCharTask {
     fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<char, IOError>> {
         let mut shared = self.shared.as_ref().borrow_mut();
 
-        let mut data = String::new();
-
-        // take the data in the buffer and set an empty string in its place
-        std::mem::swap(&mut data, &mut shared.buffer);
-
-        if !data.is_empty() {
-            // SAFETY:
-            // Since we just read a string we know the channel isn't closed.
-            // Also we know that we read the whole string so the buffer is empty.
-            // Also the Ok variant always has a string with length > 0.
-            // Therfore we can just memswap it back.
-
-            let char = data.remove(0);
-            std::mem::swap(&mut data, &mut shared.buffer);
+        if !shared.buffer.is_empty() {
+            let char = shared.buffer.remove(0);
 
             Poll::Ready(Ok(char))
         } else {

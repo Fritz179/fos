@@ -11,41 +11,37 @@ pub enum FileDirectoryPipe {
     Directory(Vec<String>),
 }
 
-pub struct EntryName(String);
+pub struct Name(String);
 
-pub struct Directory(Vec<(EntryName, InodeTypes)>);
+pub struct Directory(Vec<(Name, Inode)>);
 
-pub enum InodeTypes {
+pub enum Inode {
     File(String),
     Directory(Directory),
 }
 
-pub struct Inode {
-    inode: InodeTypes,
-}
-
 pub struct Fs {
-    inode: Directory,
+    mount: Directory,
 }
 
 impl Fs {
     pub fn new() -> Self {
         Fs {
-            inode: Directory(vec![
+            mount: Directory(vec![
                 (
-                    EntryName("mount-file".to_string()),
-                    InodeTypes::File("content_of_mount_file".to_string()),
+                    Name("mount-file".to_string()),
+                    Inode::File("content_of_mount_file".to_string()),
                 ),
                 (
-                    EntryName("mount_folder".to_string()),
-                    InodeTypes::Directory(Directory(vec![
+                    Name("mount_folder".to_string()),
+                    Inode::Directory(Directory(vec![
                         (
-                            EntryName("sub_file_1".to_string()),
-                            InodeTypes::File("content_of_sub_file_1".to_string()),
+                            Name("sub_file_1".to_string()),
+                            Inode::File("content_of_sub_file_1".to_string()),
                         ),
                         (
-                            EntryName("sub_file_2".to_string()),
-                            InodeTypes::File("content_of_sub_file_2".to_string()),
+                            Name("sub_file_2".to_string()),
+                            Inode::File("content_of_sub_file_2".to_string()),
                         ),
                     ])),
                 ),
@@ -54,9 +50,12 @@ impl Fs {
     }
 }
 
+#[derive(Debug)]
 pub enum OpenError {
-    ENOENT,
-    ENODIR,
+    NoEntry,
+    NoDirectoy,
+    IsDirectory,
+    IsFile
 }
 
 impl Proc {
@@ -66,12 +65,13 @@ impl Proc {
     ) -> Result<ReadableWritableDescriptor<PipeReader, PipeWriter>, OpenError> {
         let fs = &ROOT.fs;
 
-        for entry in fs.inode.0.iter() {
-            if let (name, InodeTypes::File(content)) = entry {
-                if name.0 != filename {
-                    continue;
-                }
+        for (name, entry) in fs.mount.0.iter() {
+            if name.0 != filename {
+                continue;
+            }
 
+            if let Inode::File(content) = entry {
+                
                 let pipe = self.pipe();
 
                 pipe.write(content);
@@ -80,7 +80,25 @@ impl Proc {
             }
         }
 
-        Err(OpenError::ENOENT)
+        Err(OpenError::NoEntry)
+    }
+
+    pub fn open_dir(&self, dirname: String) ->  Result<&Directory, OpenError> {
+        let fs = &ROOT.fs;
+
+        for (name, entry) in fs.mount.0.iter() {
+            if name.0 != dirname {
+                continue;
+            }
+
+            if let Inode::Directory(directory) = entry {
+                return Ok(directory);
+            }
+
+            return Err(OpenError::IsFile)
+        }
+
+        Err(OpenError::NoEntry)
     }
 
     pub fn pipe(&self) -> ReadableWritableDescriptor<PipeReader, PipeWriter> {

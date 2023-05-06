@@ -1,4 +1,15 @@
-pub mod font;
+#[cfg(feature = "c64")]
+mod font {
+    mod font_c64;
+    pub use font_c64::*;
+}
+
+#[cfg(not(feature = "c64"))]
+mod font {
+    mod font_default;
+    pub use font_default::*;
+}
+
 pub mod tekenen;
 pub use tekenen::Tekenen;
 
