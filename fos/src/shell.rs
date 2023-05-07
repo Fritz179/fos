@@ -14,6 +14,9 @@ use ps_tree::PsTreeProgram;
 mod cat;
 use cat::CatProgram;
 
+mod ls;
+use ls::LsProgram;
+
 pub struct Shell {
     pub proc: Proc,
     buffer: RefCell<String>,
@@ -67,6 +70,7 @@ impl Process for Shell {
                         let program: Option<Rc<dyn Process>> = match command {
                             "echo" => Some(self_clone.proc.spawn::<EchoProgram>()),
                             "pstree" => Some(self_clone.proc.spawn::<PsTreeProgram>()),
+                            "ls" => Some(self_clone.proc.spawn::<LsProgram>()),
                             "cat" => Some(self_clone.proc.spawn::<CatProgram>()),
                             _ => {
                                 self_clone.proc.stdout.write("Invalid command!\n");

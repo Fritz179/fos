@@ -52,5 +52,3 @@ impl Process for CatProgram {
         self.proc.exit();
     }
 }
-
-impl CatProgram {}

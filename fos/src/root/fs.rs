@@ -11,9 +11,9 @@ pub enum FileDirectoryPipe {
     Directory(Vec<String>),
 }
 
-pub struct Name(String);
+pub struct Name(pub String);
 
-pub struct Directory(Vec<(Name, Inode)>);
+pub struct Directory(pub Vec<(Name, Inode)>);
 
 pub enum Inode {
     File(String),
